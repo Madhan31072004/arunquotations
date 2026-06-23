@@ -8,7 +8,8 @@ const DEV_API_URL = Platform.select({
   default: 'http://localhost:5000/api',
 });
 
-export const API_URL = DEV_API_URL;
+// Use EXPO_PUBLIC_API_URL if it exists (for production), otherwise use DEV_API_URL
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || DEV_API_URL;
 
 // App constants
 export const APP_NAME = 'Arun Quotations';
