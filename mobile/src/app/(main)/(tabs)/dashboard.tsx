@@ -1,0 +1,358 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/lib/theme';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Header } from '@/components/layout/Header';
+import { useResponsive } from '@/hooks/useResponsive';
+import { CURRENCY } from '@/lib/constants';
+import { useDashboardStats } from '@/features/data/apiHooks';
+import { ActivityIndicator } from 'react-native';
+export default function DashboardScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { isMobile, isDesktop, contentPadding } = useResponsive();
+  const { data: dashboard, isLoading } = useDashboardStats();
+
+  const formatAmount = (amount: number) => {
+    if (amount >= 100000) {
+      return `${CURRENCY.symbol}${(amount / 100000).toFixed(1)}L`;
+    }
+    return `${CURRENCY.symbol}${amount.toLocaleString('en-IN')}`;
+  };
+
+  const stats = [
+    {
+      label: 'Total Quotations',
+      value: dashboard?.totalQuotes?.toString() || '0',
+      change: 'Lifetime',
+      icon: 'document-text' as const,
+      color: Colors.primary,
+    },
+    {
+      label: 'Active Clients',
+      value: dashboard?.activeClients?.toString() || '0',
+      change: 'All time',
+      icon: 'people' as const,
+      color: Colors.success,
+    },
+    {
+      label: 'Pending Approval',
+      value: dashboard?.pendingQuotes?.toString() || '0',
+      change: 'Needs follow-up',
+      icon: 'time' as const,
+      color: Colors.warning,
+    },
+    {
+      label: 'Revenue',
+      value: formatAmount(dashboard?.totalRevenue || 0),
+      change: 'Approved quotes',
+      icon: 'trending-up' as const,
+      color: Colors.info,
+    },
+  ];
+
+  const recentQuotations = dashboard?.recentQuotations || [];
+
+  return (
+    <View style={styles.container}>
+      {isMobile && <Header title="Dashboard" />}
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { padding: contentPadding },
+          !isMobile && { paddingTop: Spacing.xxl },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Desktop title */}
+        {isDesktop && (
+          <View style={styles.pageHeader}>
+            <View>
+              <Text style={styles.greeting}>Good evening 👋</Text>
+              <Text style={styles.pageTitle}>Dashboard Overview</Text>
+            </View>
+            <Button
+              title="New Quotation"
+              onPress={() => router.push('/(main)/quotation/create' as any)}
+              icon={<Ionicons name="add" size={20} color={Colors.textInverse} />}
+            />
+          </View>
+        )}
+
+        {isLoading ? (
+          <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40, marginBottom: 40 }} />
+        ) : (
+          <View style={[styles.statsGrid, isDesktop && styles.statsGridDesktop]}>
+            {stats.map((stat, index) => (
+              <Card
+                key={index}
+                variant="elevated"
+                padding="md"
+                style={[styles.statCard, isDesktop ? styles.statCardDesktop : null] as any}
+              >
+                <View style={styles.statHeader}>
+                  <View style={[styles.statIcon, { backgroundColor: `${stat.color}15` }]}>
+                    <Ionicons name={stat.icon} size={22} color={stat.color} />
+                  </View>
+                </View>
+                <Text style={styles.statValue}>{stat.value}</Text>
+                <Text style={styles.statLabel}>{stat.label}</Text>
+                <Text style={styles.statChange}>{stat.change}</Text>
+              </Card>
+            ))}
+          </View>
+        )}
+
+        {/* Quick Actions (Mobile) */}
+        {isMobile && (
+          <View style={styles.quickActionsRow}>
+            <TouchableOpacity
+              style={styles.quickAction}
+              onPress={() => router.push('/(main)/quotation/create' as any)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: Colors.primaryGlow }]}>
+                <Ionicons name="add-circle" size={24} color={Colors.primary} />
+              </View>
+              <Text style={styles.quickActionText}>New Quote</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.quickAction} activeOpacity={0.7}>
+              <View style={[styles.quickActionIcon, { backgroundColor: Colors.infoBg }]}>
+                <Ionicons name="person-add" size={24} color={Colors.info} />
+              </View>
+              <Text style={styles.quickActionText}>Add Client</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.quickAction} activeOpacity={0.7}>
+              <View style={[styles.quickActionIcon, { backgroundColor: Colors.successBg }]}>
+                <Ionicons name="cube" size={24} color={Colors.success} />
+              </View>
+              <Text style={styles.quickActionText}>Materials</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Recent Quotations */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Quotations</Text>
+          <TouchableOpacity
+            onPress={() => router.push('/(main)/(tabs)/quotations' as any)}
+          >
+            <Text style={styles.seeAll}>See All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {recentQuotations.map((q: any) => (
+          <TouchableOpacity key={q._id} activeOpacity={0.7} onPress={() => router.push(`/(main)/quotation/${q._id}` as any)}>
+            <Card variant="default" padding="md" style={styles.quotationCard}>
+              <View style={styles.quotationRow}>
+                <View style={styles.quotationInfo}>
+                  <View style={styles.quotationHeader}>
+                    <Text style={styles.quotationNumber}>{q.quotationNumber}</Text>
+                    <Badge
+                      text={q.status}
+                      color={
+                        q.status === 'approved' ? Colors.success :
+                        q.status === 'draft' ? Colors.textTertiary :
+                        q.status === 'revised' ? Colors.warning :
+                        Colors.primary
+                      }
+                      variant="soft"
+                    />
+                  </View>
+                  <Text style={styles.quotationClient}>{q.clientId?.name || 'Unknown Client'}</Text>
+                  <Text style={styles.quotationProject}>{q.title}</Text>
+                </View>
+                <View style={styles.quotationRight}>
+                  <Text style={styles.quotationAmount}>{formatAmount(q.grandTotal)}</Text>
+                  <Text style={styles.quotationDate}>{new Date(q.createdAt).toLocaleDateString()}</Text>
+                </View>
+              </View>
+            </Card>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    paddingBottom: Spacing.huge,
+  },
+
+  // Page header (desktop)
+  pageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: Spacing.xxl,
+  },
+  greeting: {
+    fontSize: FontSize.md,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
+  },
+  pageTitle: {
+    fontSize: FontSize.xxxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+
+  // Stats
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+    marginBottom: Spacing.xxl,
+  },
+  statsGridDesktop: {
+    gap: Spacing.lg,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: '45%',
+  },
+  statCardDesktop: {
+    minWidth: 200,
+  },
+  statHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  statIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statValue: {
+    fontSize: FontSize.xxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  statLabel: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  statChange: {
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+    marginTop: Spacing.xs,
+  },
+
+  // Quick actions
+  quickActionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.xxl,
+  },
+  quickAction: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  quickActionText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.textSecondary,
+  },
+
+  // Section header
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  seeAll: {
+    fontSize: FontSize.sm,
+    color: Colors.primary,
+    fontWeight: FontWeight.semiBold,
+  },
+
+  // Quotation cards
+  quotationCard: {
+    marginBottom: Spacing.md,
+  },
+  quotationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  quotationInfo: {
+    flex: 1,
+  },
+  quotationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  quotationNumber: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semiBold,
+    color: Colors.primary,
+  },
+  quotationClient: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semiBold,
+    color: Colors.textPrimary,
+  },
+  quotationProject: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  quotationRight: {
+    alignItems: 'flex-end',
+  },
+  quotationAmount: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  quotationDate: {
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+    marginTop: Spacing.xs,
+  },
+});

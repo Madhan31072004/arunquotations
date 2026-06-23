@@ -1,0 +1,159 @@
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '@/lib/theme';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { useResponsive } from '@/hooks/useResponsive';
+import { CURRENCY } from '@/lib/constants';
+import { generateQuotationHTML, printHtmlToPdfWeb } from '@/lib/pdfTemplate';
+import { useQuotation, useCompanyProfile } from '@/features/data/apiHooks';
+import { ActivityIndicator } from 'react-native';
+
+const statusColors: Record<string, string> = {
+  draft: Colors.statusDraft, sent: Colors.statusSent,
+  approved: Colors.statusApproved, rejected: Colors.statusRejected, revised: Colors.statusRevised,
+};
+
+export default function QuotationDetailScreen() {
+  const { id } = useLocalSearchParams();
+  const router = useRouter();
+  const { isMobile, isDesktop, contentPadding } = useResponsive();
+  
+  const { data: q, isLoading } = useQuotation(id as string);
+  const { data: company } = useCompanyProfile();
+  
+  const fmt = (n: number) => `${CURRENCY.symbol}${(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
+  const generatePDF = async () => {
+    try {
+      const html = generateQuotationHTML(q, company);
+      if (Platform.OS === 'web') {
+        printHtmlToPdfWeb(html);
+      } else {
+        const { uri } = await Print.printToFileAsync({ html });
+        await Sharing.shareAsync(uri);
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    }
+  };
+
+  if (isLoading || !q) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.topTitle}>{q.quotationNumber}</Text>
+        <View style={styles.topActions}>
+          <Button title="Edit" onPress={() => router.push({ pathname: '/(main)/quotation/create', params: { id } })} variant="outline" size="sm" icon={<Ionicons name="create-outline" size={16} color={Colors.primary} />} />
+          <Button title="PDF" onPress={generatePDF} size="sm" icon={<Ionicons name="download-outline" size={16} color={Colors.textInverse} />} style={{ marginLeft: 8 }} />
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={[styles.scroll, { padding: contentPadding }]} showsVerticalScrollIndicator={false}>
+        {/* Header Info */}
+        <Card variant="gold" padding="md" style={styles.headerCard}>
+          <View style={styles.headerRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.qTitle}>{q.title}</Text>
+              <Badge text={q.status} color={statusColors[q.status]} variant="soft" size="md" />
+            </View>
+            <Text style={styles.grandTotalBig}>{fmt(q.grandTotal)}</Text>
+          </View>
+          <View style={styles.metaGrid}>
+            <View style={styles.metaItem}><Ionicons name="person-outline" size={14} color={Colors.textTertiary} /><Text style={styles.metaText}>{q.clientId?.name}</Text></View>
+            <View style={styles.metaItem}><Ionicons name="calendar-outline" size={14} color={Colors.textTertiary} /><Text style={styles.metaText}>{new Date(q.createdAt).toLocaleDateString()}</Text></View>
+            <View style={styles.metaItem}><Ionicons name="layers-outline" size={14} color={Colors.textTertiary} /><Text style={styles.metaText}>{q.areas?.length || 0} areas</Text></View>
+          </View>
+        </Card>
+
+        {/* Area Breakdown */}
+        {q.areas?.map((area: any, ai: number) => (
+          <Card key={ai} variant="default" padding="none" style={styles.areaCard}>
+            <View style={styles.areaHeader}>
+              <View style={styles.areaLeft}>
+                <Ionicons name={area.areaName === "General Items" ? "list" : "layers"} size={18} color={Colors.primary} />
+                <Text style={styles.areaName}>{area.areaName === "General Items" ? "Standalone Items" : area.areaName}</Text>
+              </View>
+              <Text style={styles.areaSub}>{fmt(area.subtotal)}</Text>
+            </View>
+            {area.items?.map((item: any, ii: number) => (
+              <View key={ii} style={[styles.itemRow, ii === area.items.length - 1 && { borderBottomWidth: 0 }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemDesc}>
+                    {item.description}
+                    {item.finish ? <Text style={{ fontStyle: 'italic', fontWeight: 'normal', color: Colors.textSecondary }}> ({item.finish})</Text> : null}
+                  </Text>
+                  {item.height && item.width ? (
+                    <Text style={styles.itemMeta}>
+                      {item.height} ft × {item.width} ft = {(item.height * item.width).toFixed(2)} sq.ft {item.quantity > 1 ? `(Qty: ${item.quantity}) ` : ''}× {fmt(item.unitPrice)} / sq.ft
+                    </Text>
+                  ) : (
+                    <Text style={styles.itemMeta}>
+                      {item.quantity || 1} sq.ft × {fmt(item.unitPrice)} / sq.ft
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.itemAmt}>{fmt(item.amount)}</Text>
+              </View>
+            ))}
+          </Card>
+        ))}
+
+        {/* Summary */}
+        <Card variant="elevated" padding="md" style={{ marginTop: Spacing.sm }}>
+          <View style={styles.sumRow}><Text style={styles.sumLabel}>Subtotal</Text><Text style={styles.sumVal}>{fmt(q.subtotal)}</Text></View>
+          {q.discountAmount > 0 && <View style={styles.sumRow}><Text style={styles.sumLabel}>Discount ({q.discountValue}{q.discountType === 'percentage' ? '%' : ''})</Text><Text style={[styles.sumVal, { color: Colors.error }]}>-{fmt(q.discountAmount)}</Text></View>}
+          <View style={styles.sumRow}><Text style={styles.sumLabel}>GST ({q.taxPercentage}%)</Text><Text style={styles.sumVal}>+{fmt(q.taxAmount)}</Text></View>
+          <View style={[styles.sumRow, styles.totalRow]}><Text style={styles.totalLabel}>Grand Total</Text><Text style={styles.totalVal}>{fmt(q.grandTotal)}</Text></View>
+        </Card>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background },
+  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.sm },
+  topTitle: { flex: 1, fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.primary },
+  topActions: { flexDirection: 'row' },
+  scroll: { paddingBottom: 100 },
+  headerCard: { marginBottom: Spacing.lg },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: Spacing.lg },
+  qTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: Colors.textPrimary, marginBottom: Spacing.sm },
+  grandTotalBig: { fontSize: FontSize.xxl, fontWeight: FontWeight.extraBold, color: Colors.primary },
+  metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.lg },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaText: { fontSize: FontSize.sm, color: Colors.textSecondary },
+  areaCard: { marginBottom: Spacing.md },
+  areaHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, backgroundColor: Colors.surfaceElevated },
+  areaLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  areaName: { fontSize: FontSize.md, fontWeight: FontWeight.semiBold, color: Colors.textPrimary },
+  areaSub: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.primary },
+  itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  itemDesc: { fontSize: FontSize.sm, color: Colors.textPrimary, fontWeight: FontWeight.medium },
+  itemMeta: { fontSize: FontSize.xs, color: Colors.textTertiary, marginTop: 2 },
+  itemAmt: { fontSize: FontSize.sm, fontWeight: FontWeight.semiBold, color: Colors.textPrimary, marginLeft: Spacing.md },
+  sumRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm },
+  sumLabel: { fontSize: FontSize.md, color: Colors.textSecondary },
+  sumVal: { fontSize: FontSize.md, fontWeight: FontWeight.semiBold, color: Colors.textPrimary },
+  totalRow: { borderTopWidth: 1, borderTopColor: Colors.borderGold, paddingTop: Spacing.md, marginTop: Spacing.sm, marginBottom: 0 },
+  totalLabel: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.primary },
+  totalVal: { fontSize: FontSize.xxl, fontWeight: FontWeight.extraBold, color: Colors.primary },
+});
