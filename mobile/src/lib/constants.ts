@@ -2,10 +2,10 @@ import { Platform } from 'react-native';
 
 // API Configuration
 const DEV_API_URL = Platform.select({
-  web: 'http://localhost:5000/api',
+  web: 'https://arunquotations.onrender.com/api',
   android: 'http://10.0.2.2:5000/api',
   ios: 'http://localhost:5000/api',
-  default: 'http://localhost:5000/api',
+  default: 'https://arunquotations.onrender.com/api',
 });
 
 // Use EXPO_PUBLIC_API_URL if it exists (for production), otherwise use DEV_API_URL
