@@ -37,6 +37,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.send('Arun Quotations API is running! 🚀');
+});
+
 // Error handler
 const errorHandler = require('./middleware/errorHandler');
 app.use(errorHandler);
