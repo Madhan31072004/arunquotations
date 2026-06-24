@@ -144,7 +144,7 @@ export default function QuotationDetailScreen() {
         </Card>
       </ScrollView>
 
-      <Modal visible={showStatusModal} transparent animationType="fade">
+      <Modal visible={showStatusModal} transparent animationType="fade" onRequestClose={() => setShowStatusModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowStatusModal(false)}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>Change Status</Text>
