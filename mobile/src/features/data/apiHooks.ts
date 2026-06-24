@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { API_URL } from '@/lib/constants';
 
 // --- Clients ---
 export const useClients = () => {
@@ -257,6 +258,39 @@ export const useExportData = () => {
     mutationFn: async () => {
       const { data } = await api.get('/export');
       return data;
+    },
+  });
+};
+
+// ==========================================
+// PUBLIC API (NO AUTH REQUIRED)
+// ==========================================
+
+export const usePublicQuotation = (id: string) => {
+  return useQuery({
+    queryKey: ['publicQuotation', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const res = await fetch(`${API_URL}/public/quotations/${id}`);
+      if (!res.ok) throw new Error('Network response was not ok');
+      return res.json();
+    },
+    enabled: !!id,
+  });
+};
+
+export const useAcceptPublicQuotation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_URL}/public/quotations/${id}/accept`, {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error('Failed to accept quotation');
+      return res.json();
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['publicQuotation', id] });
     },
   });
 };

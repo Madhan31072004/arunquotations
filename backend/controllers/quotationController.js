@@ -162,6 +162,8 @@ exports.sendQuotationEmail = async (req, res) => {
       },
     });
 
+    const publicLink = `https://arunquotations.vercel.app/public/quote/${quotation._id}`;
+
     const mailOptions = {
       from: `"Arun Interiors" <${emailUser}>`,
       to: toEmail,
@@ -170,6 +172,7 @@ exports.sendQuotationEmail = async (req, res) => {
         <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; color: #333;">
           <p>Dear ${quotation.clientId?.name || 'Client'},</p>
           <p>Please find your quotation details below for <strong>${quotation.title}</strong>.</p>
+          <p><a href="${publicLink}" style="display: inline-block; background-color: #2563eb; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 10px 0;">View and Accept Online</a></p>
           <br/>
           ${html}
         </div>

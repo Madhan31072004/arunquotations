@@ -12,6 +12,7 @@ const lineItemSchema = new mongoose.Schema({
   height: { type: Number, default: 0 },
   quantity: { type: Number, default: 1 },
   unitPrice: { type: Number, default: 0 },
+  costPrice: { type: Number, default: 0 },
   amount: { type: Number, default: 0 },
   remarks: { type: String, default: '' },
 }, { _id: true });
@@ -45,6 +46,11 @@ const quotationSchema = new mongoose.Schema({
   taxPercentage: { type: Number, default: 18 },
   taxAmount: { type: Number, default: 0 },
   grandTotal: { type: Number, default: 0 },
+  
+  totalCost: { type: Number, default: 0 },
+  projectedProfit: { type: Number, default: 0 },
+
+  galleryImages: [{ type: String }],
 
   notes: { type: String, default: '' },
   termsAndConditions: [{ type: String }],
@@ -64,19 +70,23 @@ quotationSchema.index({ userId: 1, clientId: 1 });
 quotationSchema.pre('save', function (next) {
   try {
     // Calculate area subtotals
+    let calcTotalCost = 0;
     this.areas.forEach((area) => {
       area.items.forEach((item, idx) => {
         item.slNo = idx + 1;
         const h = item.height || 0;
         const w = item.width || 0;
         const dimensionArea = (h > 0 && w > 0) ? (h * w) : 1;
-        item.amount = dimensionArea * (item.quantity || 0) * (item.unitPrice || 0);
+        const totalQtyArea = dimensionArea * (item.quantity || 0);
+        item.amount = totalQtyArea * (item.unitPrice || 0);
+        calcTotalCost += totalQtyArea * (item.costPrice || 0);
       });
       area.subtotal = area.items.reduce((sum, item) => sum + (item.amount || 0), 0);
     });
 
     // Calculate quotation totals
     this.subtotal = this.areas.reduce((sum, area) => sum + (area.subtotal || 0), 0);
+    this.totalCost = calcTotalCost;
 
     // Discount
     if (this.discountType === 'percentage') {
@@ -92,6 +102,9 @@ quotationSchema.pre('save', function (next) {
 
     // Grand total
     this.grandTotal = afterDiscount + this.taxAmount;
+    
+    // Projected profit (Grand Total excluding tax - Total Cost)
+    this.projectedProfit = afterDiscount - this.totalCost;
 
     if (typeof next === 'function') {
       next();

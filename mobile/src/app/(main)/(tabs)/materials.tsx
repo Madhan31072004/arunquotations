@@ -27,9 +27,11 @@ export default function MaterialsScreen() {
   // Form state
   const [name, setName] = useState('');
   const [category, setCategory] = useState<string>(MATERIAL_CATEGORIES[0] || 'Plywood');
-  const [unitPrice, setUnitPrice] = useState('');
   const [unit, setUnit] = useState('sq.ft');
+  const [unitPrice, setUnitPrice] = useState('');
+  const [costPrice, setCostPrice] = useState('');
   const [brand, setBrand] = useState('');
+  const [description, setDescription] = useState('');
 
   const { data: materials, isLoading } = useMaterials();
   const createMaterial = useCreateMaterial();
@@ -38,9 +40,9 @@ export default function MaterialsScreen() {
   const handleAddMaterial = async () => {
     if (!name || !unitPrice) return;
     try {
-      await createMaterial.mutateAsync({ name, category, unitPrice: Number(unitPrice), unit, brand });
+      await createMaterial.mutateAsync({ name, category, unitPrice: Number(unitPrice), costPrice: Number(costPrice) || 0, unit, brand });
       setShowModal(false);
-      setName(''); setUnitPrice(''); setBrand('');
+      setName(''); setUnitPrice(''); setCostPrice(''); setBrand('');
     } catch (e) {
       console.error(e);
     }
@@ -194,7 +196,10 @@ export default function MaterialsScreen() {
 
               <View style={{ flexDirection: 'row', gap: Spacing.md }}>
                 <View style={{ flex: 1 }}>
-                  <Input label="Rate (₹)" placeholder="e.g. 125" value={unitPrice} onChangeText={setUnitPrice} keyboardType="numeric" />
+                  <Input label="Selling Rate (₹)" placeholder="e.g. 125" value={unitPrice} onChangeText={setUnitPrice} keyboardType="numeric" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Input label="Cost Rate (₹)" placeholder="e.g. 100" value={costPrice} onChangeText={setCostPrice} keyboardType="numeric" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Input label="Unit" placeholder="e.g. sq.ft" value={unit} onChangeText={setUnit} />

@@ -68,7 +68,8 @@ export default function QuotationDetailScreen() {
   const handleWhatsApp = async () => {
     setShowShareMenu(false);
     const phone = q.clientId?.phone || '';
-    const text = `Hello ${q.clientId?.name || ''},\n\nHere is your quotation for: *${q.title}*\nTotal Amount: ${fmt(q.grandTotal)}\n\nPlease review it and let us know if you have any questions.\n\nBest Regards,\n${company?.companyName || 'Arun Interiors'}`;
+    const publicLink = `https://arunquotations.vercel.app/public/quote/${q._id}`;
+    const text = `Hello ${q.clientId?.name || ''},\n\nHere is your quotation for: *${q.title}*\nTotal Amount: ${fmt(q.grandTotal)}\n\nView and Accept your quotation online here:\n${publicLink}\n\nPlease review it and let us know if you have any questions.\n\nBest Regards,\n${company?.companyName || 'Arun Interiors'}`;
     const url = `https://wa.me/${phone.replace(/\D/g,'')}?text=${encodeURIComponent(text)}`;
     Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open WhatsApp'));
     
@@ -176,6 +177,26 @@ export default function QuotationDetailScreen() {
           {q.discountAmount > 0 && <View style={styles.sumRow}><Text style={styles.sumLabel}>Discount ({q.discountValue}{q.discountType === 'percentage' ? '%' : ''})</Text><Text style={[styles.sumVal, { color: Colors.error }]}>-{fmt(q.discountAmount)}</Text></View>}
           <View style={styles.sumRow}><Text style={styles.sumLabel}>GST ({q.taxPercentage}%)</Text><Text style={styles.sumVal}>+{fmt(q.taxAmount)}</Text></View>
           <View style={[styles.sumRow, styles.totalRow]}><Text style={styles.totalLabel}>Grand Total</Text><Text style={styles.totalVal}>{fmt(q.grandTotal)}</Text></View>
+          
+          {/* Private Profit Tracking */}
+          {q.projectedProfit !== undefined && (
+            <View style={{ marginTop: Spacing.lg, padding: Spacing.md, backgroundColor: Colors.successBg, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.success + '40' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xs }}>
+                <Ionicons name="trending-up" size={16} color={Colors.success} style={{ marginRight: 6 }} />
+                <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.success }}>Admin Only: Profit Projection</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Est. Total Cost:</Text>
+                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.medium, color: Colors.textPrimary }}>{fmt(q.totalCost)}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.textPrimary }}>Projected Margin:</Text>
+                <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.success }}>
+                  {fmt(q.projectedProfit)} ({((q.projectedProfit / (q.grandTotal || 1)) * 100).toFixed(1)}%)
+                </Text>
+              </View>
+            </View>
+          )}
         </Card>
       </ScrollView>
 

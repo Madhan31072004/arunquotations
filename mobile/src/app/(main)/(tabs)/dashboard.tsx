@@ -197,6 +197,50 @@ export default function DashboardScreen() {
           </View>
         )}
 
+        {/* Analytics Section */}
+        {clients && clients.length > 0 && dashboard && (
+          <View style={{ marginBottom: Spacing.xl, flexDirection: isDesktop ? 'row' : 'column', gap: Spacing.lg }}>
+            <Card variant="elevated" padding="md" style={{ flex: 1 }}>
+              <Text style={{ fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.textPrimary, marginBottom: Spacing.md }}>Top Clients by Revenue</Text>
+              <View style={{ gap: Spacing.sm }}>
+                {[...clients].sort((a, b) => (b.revenue || 0) - (a.revenue || 0)).slice(0, 3).map((c, i) => {
+                  const maxRev = Math.max(...clients.map((cl: any) => cl.revenue || 0), 1);
+                  const pct = ((c.revenue || 0) / maxRev) * 100;
+                  return (
+                    <View key={c._id} style={{ gap: 4 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary }}>{c.name}</Text>
+                        <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.semiBold, color: Colors.primary }}>{formatAmount(c.revenue || 0)}</Text>
+                      </View>
+                      <View style={{ height: 8, backgroundColor: Colors.surfaceHover, borderRadius: 4, overflow: 'hidden' }}>
+                        <View style={{ height: '100%', width: `${pct}%`, backgroundColor: i === 0 ? Colors.primary : i === 1 ? Colors.info : Colors.success, borderRadius: 4 }} />
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </Card>
+            
+            <Card variant="elevated" padding="md" style={{ flex: 1 }}>
+              <Text style={{ fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.textPrimary, marginBottom: Spacing.md }}>Quotation Pipeline</Text>
+              <View style={{ gap: Spacing.sm }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Badge text="Approved" color={Colors.success} variant="soft" />
+                  <Text style={{ fontWeight: 'bold', color: Colors.textPrimary }}>{dashboard.activeClients}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Badge text="Pending" color={Colors.warning} variant="soft" />
+                  <Text style={{ fontWeight: 'bold', color: Colors.textPrimary }}>{dashboard.pendingQuotes}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Badge text="Drafts" color={Colors.textTertiary} variant="soft" />
+                  <Text style={{ fontWeight: 'bold', color: Colors.textPrimary }}>{dashboard.totalQuotes - dashboard.activeClients - dashboard.pendingQuotes}</Text>
+                </View>
+              </View>
+            </Card>
+          </View>
+        )}
+
         {/* Recent Quotations */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recent Quotations</Text>

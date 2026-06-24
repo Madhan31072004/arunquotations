@@ -304,8 +304,22 @@ export const generateQuotationHTML = (quotation: any, company: any) => {
       <div class="footer">
         <em>Thank you for choosing ${company?.companyName || 'Arun Interior Studio'}</em>
       </div>
-    </body>
-    </html>
+    
+    ${quotation.galleryImages && quotation.galleryImages.length > 0 ? `
+    <div style="page-break-before: always; font-family: 'Inter', sans-serif;">
+      <h2 style="color: ${themeColor}; font-size: 24px; margin-bottom: 20px; border-bottom: 2px solid ${themeColor}; padding-bottom: 10px;">Appendix: Reference Gallery</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+        ${quotation.galleryImages.map((img: string) => `
+          <div style="border: 1px solid #eee; padding: 10px; border-radius: 8px; text-align: center; background: #fff;">
+            <img src="${img}" style="max-width: 100%; height: auto; border-radius: 4px; object-fit: contain; max-height: 300px;" />
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
+
+  </body>
+  </html>
   `;
 };
 

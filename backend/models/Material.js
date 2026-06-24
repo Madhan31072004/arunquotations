@@ -6,6 +6,7 @@ const materialSchema = new mongoose.Schema({
   category: { type: String, required: true, trim: true },
   unit: { type: String, required: true, default: 'sq.ft' },
   unitPrice: { type: Number, required: true, default: 0 },
+  costPrice: { type: Number, default: 0 },
   brand: { type: String, default: '' },
   description: { type: String, default: '' },
   isActive: { type: Boolean, default: true },

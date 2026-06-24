@@ -18,7 +18,7 @@ interface LineItem {
   id: string; description: string; unit: string;
   finish: string;
   height: string; width: string;
-  quantity: string; unitPrice: string; amount: number; remarks: string;
+  quantity: string; unitPrice: string; costPrice: number; amount: number; remarks: string;
 }
 interface Area {
   id: string; areaName: string; items: LineItem[]; subtotal: number; collapsed: boolean;
@@ -28,7 +28,7 @@ const emptyItem = (): LineItem => ({
   id: Date.now().toString() + Math.random(), description: '', unit: 'sq.ft',
   finish: '',
   height: '', width: '',
-  quantity: '1', unitPrice: '', amount: 0, remarks: '',
+  quantity: '1', unitPrice: '', costPrice: 0, amount: 0, remarks: '',
 });
 
 export default function CreateQuotationScreen() {
@@ -48,11 +48,13 @@ export default function CreateQuotationScreen() {
   const [taxPct, setTaxPct] = useState(18);
   const [showAreaPicker, setShowAreaPicker] = useState(false);
   const [quotationNumber, setQuotationNumber] = useState('');
+  const [galleryImages, setGalleryImages] = useState('');
 
   const { data: clients } = useClients();
   const createClient = useCreateClient();
   const { data: company } = useCompanyProfile();
   const createQuotation = useCreateQuotation();
+  const { data: materials } = useMaterials();
 
   useEffect(() => {
     if (existingQuotation) {
@@ -81,6 +83,9 @@ export default function CreateQuotationScreen() {
           subtotal: a.subtotal || 0,
           collapsed: false
         })));
+      }
+      if (existingQuotation.galleryImages) {
+        setGalleryImages(existingQuotation.galleryImages.join(', '));
       }
     }
   }, [existingQuotation]);
@@ -142,7 +147,8 @@ export default function CreateQuotationScreen() {
             height: parseFloat(String(i.height)) || 0,
             width: parseFloat(String(i.width)) || 0,
             quantity: parseFloat(String(i.quantity)) || 0,
-            unitPrice: parseFloat(String(i.unitPrice)) || 0
+            unitPrice: parseFloat(String(i.unitPrice)) || 0,
+            costPrice: i.costPrice || 0
           }))
       })).filter(a => a.items.length > 0);
 
@@ -159,7 +165,8 @@ export default function CreateQuotationScreen() {
         discountType: 'percentage',
         discountValue: discountPct,
         taxPercentage: taxPct,
-        areas: cleanedAreas
+        areas: cleanedAreas,
+        galleryImages: galleryImages ? galleryImages.split(',').map(u => u.trim()).filter(Boolean) : []
       };
 
       if (id) {
@@ -184,7 +191,17 @@ export default function CreateQuotationScreen() {
       const area = { ...next[areaIdx] };
       const items = [...area.items];
       const item = { ...items[itemIdx], [field]: value };
-      if (field === 'quantity' || field === 'unitPrice' || field === 'height' || field === 'width') {
+      
+      // Auto-fill prices if description matches a material
+      if (field === 'description' && materials) {
+        const match = materials.find((m: any) => m.name.toLowerCase() === value.trim().toLowerCase());
+        if (match) {
+          if (!item.unitPrice) item.unitPrice = String(match.unitPrice);
+          item.costPrice = match.costPrice || 0;
+        }
+      }
+
+      if (field === 'quantity' || field === 'unitPrice' || field === 'height' || field === 'width' || field === 'description') {
         const h = parseFloat(String(item.height)) || 0;
         const w = parseFloat(String(item.width)) || 0;
         const qty = parseFloat(String(item.quantity)) || 0;
@@ -270,7 +287,8 @@ export default function CreateQuotationScreen() {
   const generatePDF = async () => {
     try {
       const html = generateQuotationHTML({
-        title, clientName: clientName || 'Unknown Client', areas, subtotal, discountPct, discountAmt, taxPct, taxAmt, grandTotal, quotationNumber
+        title, clientName: clientName || 'Unknown Client', areas, subtotal, discountPct, discountAmt, taxPct, taxAmt, grandTotal, quotationNumber,
+        galleryImages: galleryImages ? galleryImages.split(',').map(u => u.trim()).filter(Boolean) : []
       }, company);
 
       if (Platform.OS === 'web') {
@@ -540,6 +558,25 @@ export default function CreateQuotationScreen() {
             </View>
           )}
 
+          {/* Reference Images Appendix */}
+          <Card variant="elevated" padding="md" style={{ marginBottom: Spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm }}>
+              <Ionicons name="images-outline" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.textPrimary }}>Appendix: Reference Images</Text>
+            </View>
+            <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginBottom: Spacing.md }}>
+              Paste image URLs (comma separated) to include them at the end of the generated PDF.
+            </Text>
+            <TextInput
+              style={{ borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.sm, padding: Spacing.md, fontSize: FontSize.sm, backgroundColor: Colors.surfaceHover, color: Colors.textPrimary, minHeight: 80 }}
+              placeholder="https://example.com/image1.jpg, https://example.com/image2.png"
+              placeholderTextColor={Colors.textTertiary}
+              value={galleryImages}
+              onChangeText={setGalleryImages}
+              multiline
+            />
+          </Card>
+
           {/* Summary (mobile only) */}
           {isMobile && renderSummary()}
         </ScrollView>
@@ -559,7 +596,8 @@ export default function CreateQuotationScreen() {
                 {Platform.OS === 'web' ? (
                   <iframe
                     srcDoc={generateQuotationHTML({
-                      title, clientName: clientName || 'Unknown Client', areas, subtotal, discountPct, discountAmt, taxPct, taxAmt, grandTotal, quotationNumber
+                      title, clientName: clientName || 'Unknown Client', areas, subtotal, discountPct, discountAmt, taxPct, taxAmt, grandTotal, quotationNumber,
+                      galleryImages: galleryImages ? galleryImages.split(',').map(u => u.trim()).filter(Boolean) : []
                     }, company)}
                     style={{ width: '100%', height: 600, border: 'none', backgroundColor: '#fff' }}
                   />

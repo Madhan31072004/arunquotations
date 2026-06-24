@@ -33,6 +33,7 @@ app.use('/api/company', require('./routes/companyRoutes'));
 app.use('/api/contact', require('./routes/contactRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/export', require('./routes/exportRoutes'));
+app.use('/api/public', require('./routes/publicRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => {
