@@ -47,7 +47,7 @@ export function Header({ title, showBack, onBack, rightAction }: HeaderProps) {
           <TouchableOpacity 
             style={styles.iconButton} 
             activeOpacity={0.7}
-            onPress={() => router.push('/(main)/notifications')}
+            onPress={() => router.push('/(main)/notifications' as any)}
           >
             <Ionicons name="notifications-outline" size={22} color={Colors.textSecondary} />
           </TouchableOpacity>
