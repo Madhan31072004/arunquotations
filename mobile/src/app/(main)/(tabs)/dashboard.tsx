@@ -263,8 +263,9 @@ export default function DashboardScreen() {
 
               <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginBottom: Spacing.xs }}>Revenue Amount (₹)</Text>
               <TextInput
-                style={{ borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.sm, padding: Spacing.sm, fontSize: FontSize.md, backgroundColor: Colors.surfaceHover, marginBottom: Spacing.lg }}
+                style={{ borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.sm, padding: Spacing.sm, fontSize: FontSize.md, backgroundColor: Colors.surfaceHover, marginBottom: Spacing.lg, color: Colors.textPrimary }}
                 placeholder="e.g. 50000"
+                placeholderTextColor={Colors.textTertiary}
                 value={revenueInput}
                 onChangeText={setRevenueInput}
                 keyboardType="numeric"

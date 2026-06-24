@@ -217,8 +217,9 @@ export default function QuotationDetailScreen() {
               ) : (
                 <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
                   <TextInput
-                    style={{ flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.sm, paddingHorizontal: Spacing.sm, fontSize: FontSize.md, backgroundColor: Colors.surfaceHover }}
+                    style={{ flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.sm, paddingHorizontal: Spacing.sm, fontSize: FontSize.md, backgroundColor: Colors.surfaceHover, color: Colors.textPrimary }}
                     placeholder="Client Email"
+                    placeholderTextColor={Colors.textTertiary}
                     value={emailInput}
                     onChangeText={setEmailInput}
                     autoCapitalize="none"
