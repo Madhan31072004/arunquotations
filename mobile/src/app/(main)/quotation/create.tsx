@@ -12,6 +12,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { CURRENCY, AREA_TEMPLATES, UNIT_TYPES, TAX_TYPES } from '@/lib/constants';
 import { generateQuotationHTML, printHtmlToPdfWeb } from '@/lib/pdfTemplate';
 import { useCreateQuotation, useClients, useCompanyProfile, useCreateClient, useQuotation, useUpdateQuotation } from '@/features/data/apiHooks';
+import * as FileSystem from 'expo-file-system';
 
 interface LineItem {
   id: string; description: string; unit: string;
@@ -276,12 +277,17 @@ export default function CreateQuotationScreen() {
         // Use our robust custom iframe printer to ensure ONLY the PDF prints, not the Chrome page wrapper
         printHtmlToPdfWeb(html);
       } else {
-        // On mobile, generate an actual file and share it
+        // On mobile, generate an actual file, rename it for sharing
         const { uri } = await Print.printToFileAsync({ html });
-        await Sharing.shareAsync(uri);
+        const cleanName = `Quotation_${quotationNumber || 'Document'}.pdf`;
+        // @ts-ignore
+        const newUri = `${FileSystem.documentDirectory}${cleanName}`;
+        await FileSystem.copyAsync({ from: uri, to: newUri });
+        await Sharing.shareAsync(newUri, { UTI: '.pdf', mimeType: 'application/pdf' });
       }
     } catch (error) {
       console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF');
     }
   };
 
