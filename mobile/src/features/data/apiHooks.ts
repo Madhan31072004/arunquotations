@@ -137,6 +137,20 @@ export const useUpdateQuotation = () => {
   });
 };
 
+export const useSendQuotationEmail = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { html: string; toEmail: string } }) => {
+      const res = await api.post(`/quotations/${id}/send-email`, data);
+      return res.data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['quotations', variables.id] });
+    },
+  });
+};
+
 // --- Dashboard ---
 export const useDashboardStats = () => {
   return useQuery({
@@ -155,7 +169,7 @@ export const useDashboardStats = () => {
         .reduce((sum: number, q: any) => sum + q.grandTotal, 0);
         
       const totalQuotes = quotes.length;
-      const pendingQuotes = quotes.filter((q: any) => q.status === 'sent' || q.status === 'revised').length;
+      const pendingQuotes = quotes.filter((q: any) => q.status === 'sent' || q.status === 'pending' || q.status === 'revised').length;
       
       return {
         totalRevenue,

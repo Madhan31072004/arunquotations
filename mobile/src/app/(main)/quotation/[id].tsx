@@ -12,12 +12,12 @@ import { Button } from '@/components/ui/Button';
 import { useResponsive } from '@/hooks/useResponsive';
 import { CURRENCY } from '@/lib/constants';
 import { generateQuotationHTML, printHtmlToPdfWeb } from '@/lib/pdfTemplate';
-import { useQuotation, useCompanyProfile, useUpdateQuotation } from '@/features/data/apiHooks';
-import { ActivityIndicator, Alert, Modal, Pressable } from 'react-native';
+import { useQuotation, useCompanyProfile, useUpdateQuotation, useSendQuotationEmail } from '@/features/data/apiHooks';
+import { ActivityIndicator, Alert, Modal, Pressable, Linking, TextInput } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 
 const statusColors: Record<string, string> = {
-  draft: Colors.statusDraft, sent: Colors.statusSent,
+  draft: Colors.statusDraft, sent: Colors.statusSent, pending: '#f59e0b',
   approved: Colors.statusApproved, rejected: Colors.statusRejected, revised: Colors.statusRevised,
 };
 
@@ -29,7 +29,11 @@ export default function QuotationDetailScreen() {
   const { data: q, isLoading } = useQuotation(id as string);
   const { data: company } = useCompanyProfile();
   const updateQuotation = useUpdateQuotation();
+  const sendEmail = useSendQuotationEmail();
+  
   const [showStatusModal, setShowStatusModal] = React.useState(false);
+  const [showShareMenu, setShowShareMenu] = React.useState(false);
+  const [emailInput, setEmailInput] = React.useState('');
   
   const fmt = (n: number) => `${CURRENCY.symbol}${(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
@@ -61,6 +65,36 @@ export default function QuotationDetailScreen() {
     }
   };
 
+  const handleWhatsApp = async () => {
+    setShowShareMenu(false);
+    const phone = q.clientId?.phone || '';
+    const text = `Hello ${q.clientId?.name || ''},\n\nHere is your quotation for: *${q.title}*\nTotal Amount: ${fmt(q.grandTotal)}\n\nPlease review it and let us know if you have any questions.\n\nBest Regards,\n${company?.companyName || 'Arun Interiors'}`;
+    const url = `https://wa.me/${phone.replace(/\D/g,'')}?text=${encodeURIComponent(text)}`;
+    Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open WhatsApp'));
+    
+    // Auto update status to pending
+    try {
+      await updateQuotation.mutateAsync({ id: q._id, data: { status: 'pending' } });
+    } catch (e) {
+      console.error('Failed to update status to pending');
+    }
+  };
+
+  const executeSendEmail = async (email: string) => {
+    if (!email) {
+      Alert.alert('Error', 'Please provide an email address.');
+      return;
+    }
+    try {
+      const html = generateQuotationHTML(q, company);
+      await sendEmail.mutateAsync({ id: q._id, data: { html, toEmail: email } });
+      Alert.alert('Success', 'Quotation sent via email successfully!');
+      setShowShareMenu(false);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send email. Check your business email credentials.');
+    }
+  };
+
   if (isLoading || !q) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -79,6 +113,7 @@ export default function QuotationDetailScreen() {
         <View style={styles.topActions}>
           <Button title="Edit" onPress={() => router.push({ pathname: '/(main)/quotation/create', params: { id } })} variant="outline" size="sm" icon={<Ionicons name="create-outline" size={16} color={Colors.primary} />} />
           <Button title="PDF" onPress={generatePDF} size="sm" icon={<Ionicons name="download-outline" size={16} color={Colors.textInverse} />} style={{ marginLeft: 8 }} />
+          <Button title="Share" onPress={() => setShowShareMenu(true)} size="sm" variant="outline" icon={<Ionicons name="share-social-outline" size={16} color={Colors.primary} />} style={{ marginLeft: 8 }} />
         </View>
       </View>
 
@@ -158,6 +193,52 @@ export default function QuotationDetailScreen() {
                 {q.status?.toLowerCase() === status && <Ionicons name="checkmark" size={20} color={statusColors[status]} />}
               </TouchableOpacity>
             ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Share Web Menu */}
+      <Modal visible={showShareMenu} transparent animationType="fade" onRequestClose={() => setShowShareMenu(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowShareMenu(false)}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Share Quotation</Text>
+            
+            <View style={{ marginBottom: Spacing.lg }}>
+              <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginBottom: Spacing.sm }}>
+                Send via Email (PDF Attached)
+              </Text>
+              {q.clientId?.email ? (
+                <TouchableOpacity style={[styles.statusOption, { paddingVertical: Spacing.sm }]} onPress={() => executeSendEmail(q.clientId.email)} disabled={sendEmail.isPending}>
+                  <Ionicons name="mail" size={20} color={Colors.primary} />
+                  <Text style={{ flex: 1, marginLeft: 12, fontSize: FontSize.md, color: Colors.textPrimary }}>
+                    {sendEmail.isPending ? 'Sending...' : `Send to ${q.clientId.email}`}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+                  <TextInput
+                    style={{ flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.sm, paddingHorizontal: Spacing.sm, fontSize: FontSize.md, backgroundColor: Colors.surfaceHover }}
+                    placeholder="Client Email"
+                    value={emailInput}
+                    onChangeText={setEmailInput}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                  <Button title={sendEmail.isPending ? "..." : "Send"} size="sm" onPress={() => executeSendEmail(emailInput)} disabled={sendEmail.isPending} />
+                </View>
+              )}
+            </View>
+
+            <View>
+              <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginBottom: Spacing.sm }}>
+                Send via WhatsApp
+              </Text>
+              <TouchableOpacity style={[styles.statusOption, { paddingVertical: Spacing.sm }]} onPress={handleWhatsApp}>
+                <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+                <Text style={{ flex: 1, marginLeft: 12, fontSize: FontSize.md, color: Colors.textPrimary }}>Send to {q.clientId?.phone || 'Client'}</Text>
+              </TouchableOpacity>
+            </View>
+
           </Pressable>
         </Pressable>
       </Modal>

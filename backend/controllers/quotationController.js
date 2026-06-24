@@ -134,3 +134,57 @@ exports.updateStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+const nodemailer = require('nodemailer');
+
+// @route   POST /api/quotations/:id/send-email
+exports.sendQuotationEmail = async (req, res) => {
+  try {
+    const { html, toEmail } = req.body;
+    const quotation = await Quotation.findOne({ _id: req.params.id, userId: req.user._id })
+      .populate('clientId');
+
+    if (!quotation) return res.status(404).json({ message: 'Quotation not found' });
+    if (!toEmail) return res.status(400).json({ message: 'Recipient email is required' });
+
+    const emailUser = process.env.EMAIL_USER || 'arunkumargopaldas@gmail.com';
+    const emailPass = process.env.EMAIL_PASS;
+
+    if (!emailPass || emailPass === 'your_gmail_app_password') {
+      return res.status(500).json({ message: 'Email credentials not configured on the server.' });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: emailUser,
+        pass: emailPass,
+      },
+    });
+
+    const mailOptions = {
+      from: `"Arun Interiors" <${emailUser}>`,
+      to: toEmail,
+      subject: `Quotation: ${quotation.title} (${quotation.quotationNumber || 'Draft'})`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; color: #333;">
+          <p>Dear ${quotation.clientId?.name || 'Client'},</p>
+          <p>Please find your quotation details below for <strong>${quotation.title}</strong>.</p>
+          <br/>
+          ${html}
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    // Auto update status to pending
+    quotation.status = 'pending';
+    await quotation.save();
+
+    res.json({ message: 'Email sent successfully', status: 'pending' });
+  } catch (error) {
+    console.error('Error sending email:', error);
+    res.status(500).json({ message: 'Failed to send email: ' + error.message });
+  }
+};
