@@ -66,7 +66,16 @@ export default function MaterialsScreen() {
 
   return (
     <View style={styles.container}>
-      {isMobile && <Header title="Materials" />}
+      {isMobile && (
+        <Header 
+          title="Materials" 
+          rightAction={
+            <TouchableOpacity onPress={() => setShowModal(true)} style={{ marginRight: Spacing.sm }}>
+              <Ionicons name="add-circle" size={28} color={Colors.primary} />
+            </TouchableOpacity>
+          }
+        />
+      )}
       <ScrollView contentContainerStyle={[styles.scroll, { padding: contentPadding }]} showsVerticalScrollIndicator={false}>
         {isDesktop && (
           <View style={styles.pageHeader}>
