@@ -12,8 +12,9 @@ import { Button } from '@/components/ui/Button';
 import { useResponsive } from '@/hooks/useResponsive';
 import { CURRENCY } from '@/lib/constants';
 import { generateQuotationHTML, printHtmlToPdfWeb } from '@/lib/pdfTemplate';
-import { useQuotation, useCompanyProfile } from '@/features/data/apiHooks';
-import { ActivityIndicator } from 'react-native';
+import { useQuotation, useCompanyProfile, useUpdateQuotation } from '@/features/data/apiHooks';
+import { ActivityIndicator, Alert, Modal, Pressable } from 'react-native';
+import * as FileSystem from 'expo-file-system';
 
 const statusColors: Record<string, string> = {
   draft: Colors.statusDraft, sent: Colors.statusSent,
@@ -27,6 +28,8 @@ export default function QuotationDetailScreen() {
   
   const { data: q, isLoading } = useQuotation(id as string);
   const { data: company } = useCompanyProfile();
+  const updateQuotation = useUpdateQuotation();
+  const [showStatusModal, setShowStatusModal] = React.useState(false);
   
   const fmt = (n: number) => `${CURRENCY.symbol}${(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
@@ -37,10 +40,23 @@ export default function QuotationDetailScreen() {
         printHtmlToPdfWeb(html);
       } else {
         const { uri } = await Print.printToFileAsync({ html });
-        await Sharing.shareAsync(uri);
+        const cleanName = `Quotation_${q.quotationNumber || 'Document'}.pdf`;
+        const newUri = `${FileSystem.cacheDirectory}${cleanName}`;
+        await FileSystem.copyAsync({ from: uri, to: newUri });
+        await Sharing.shareAsync(newUri, { UTI: '.pdf', mimeType: 'application/pdf' });
       }
     } catch (error) {
       console.error('Error generating PDF:', error);
+      Alert.alert('Error', 'Failed to generate PDF');
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    try {
+      await updateQuotation.mutateAsync({ id: q._id, data: { status: newStatus } });
+      setShowStatusModal(false);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update status');
     }
   };
 
@@ -71,7 +87,10 @@ export default function QuotationDetailScreen() {
           <View style={styles.headerRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.qTitle}>{q.title}</Text>
-              <Badge text={q.status} color={statusColors[q.status]} variant="soft" size="md" />
+              <TouchableOpacity onPress={() => setShowStatusModal(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' }} activeOpacity={0.7}>
+                <Badge text={q.status} color={statusColors[q.status]} variant="soft" size="md" />
+                <Ionicons name="chevron-down-circle" size={16} color={Colors.textTertiary} />
+              </TouchableOpacity>
             </View>
             <Text style={styles.grandTotalBig}>{fmt(q.grandTotal)}</Text>
           </View>
@@ -123,6 +142,24 @@ export default function QuotationDetailScreen() {
           <View style={[styles.sumRow, styles.totalRow]}><Text style={styles.totalLabel}>Grand Total</Text><Text style={styles.totalVal}>{fmt(q.grandTotal)}</Text></View>
         </Card>
       </ScrollView>
+
+      <Modal visible={showStatusModal} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowStatusModal(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Change Status</Text>
+            {Object.keys(statusColors).map((status) => (
+              <TouchableOpacity
+                key={status}
+                style={[styles.statusOption, q.status === status && styles.statusOptionActive]}
+                onPress={() => handleStatusChange(status)}
+              >
+                <Badge text={status} color={statusColors[status]} variant={q.status === status ? "solid" : "soft"} size="md" />
+                {q.status === status && <Ionicons name="checkmark" size={20} color={statusColors[status]} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -156,4 +193,10 @@ const styles = StyleSheet.create({
   totalRow: { borderTopWidth: 1, borderTopColor: Colors.borderGold, paddingTop: Spacing.md, marginTop: Spacing.sm, marginBottom: 0 },
   totalLabel: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.primary },
   totalVal: { fontSize: FontSize.xxl, fontWeight: FontWeight.extraBold, color: Colors.primary },
+  
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { width: 300, backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, padding: Spacing.lg },
+  modalTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, marginBottom: Spacing.md, color: Colors.textPrimary },
+  statusOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.md, paddingHorizontal: Spacing.sm, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  statusOptionActive: { borderRadius: BorderRadius.sm, backgroundColor: Colors.surfaceElevated },
 });
