@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { useResponsive } from '@/hooks/useResponsive';
 import { CURRENCY, AREA_TEMPLATES, UNIT_TYPES, TAX_TYPES } from '@/lib/constants';
 import { generateQuotationHTML, printHtmlToPdfWeb } from '@/lib/pdfTemplate';
-import { useCreateQuotation, useClients, useCompanyProfile, useCreateClient, useQuotation, useUpdateQuotation } from '@/features/data/apiHooks';
+import { useCreateQuotation, useClients, useCompanyProfile, useCreateClient, useQuotation, useUpdateQuotation, useMaterials } from '@/features/data/apiHooks';
 import * as FileSystem from 'expo-file-system';
 
 interface LineItem {

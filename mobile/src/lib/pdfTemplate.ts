@@ -2,6 +2,7 @@ import { CURRENCY } from './constants';
 
 export const generateQuotationHTML = (quotation: any, company: any) => {
   const fmt = (n: number) => `${CURRENCY.symbol}${(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  const themeColor = company?.primaryColor || '#C9A351';
 
   const areasHtml = quotation.areas.map((area: any) => `
     <div class="area-block">
@@ -54,7 +55,7 @@ export const generateQuotationHTML = (quotation: any, company: any) => {
       <title>Quotation - ${quotation.title || 'Untitled'}</title>
       <style>
         :root {
-          --primary: ${company?.primaryColor || '#C9A351'};
+          --primary: ${themeColor};
           --text: #333333;
           --bg: #ffffff;
         }
