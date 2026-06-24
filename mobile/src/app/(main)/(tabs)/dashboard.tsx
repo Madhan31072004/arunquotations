@@ -226,15 +226,15 @@ export default function DashboardScreen() {
               <View style={{ gap: Spacing.sm }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Badge text="Approved" color={Colors.success} variant="soft" />
-                  <Text style={{ fontWeight: 'bold', color: Colors.textPrimary }}>{dashboard.activeClients}</Text>
+                  <Text style={{ fontWeight: 'bold', color: Colors.textPrimary }}>{dashboard.approvedQuotes || 0}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Badge text="Pending" color={Colors.warning} variant="soft" />
-                  <Text style={{ fontWeight: 'bold', color: Colors.textPrimary }}>{dashboard.pendingQuotes}</Text>
+                  <Text style={{ fontWeight: 'bold', color: Colors.textPrimary }}>{dashboard.pendingQuotes || 0}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Badge text="Drafts" color={Colors.textTertiary} variant="soft" />
-                  <Text style={{ fontWeight: 'bold', color: Colors.textPrimary }}>{dashboard.totalQuotes - dashboard.activeClients - dashboard.pendingQuotes}</Text>
+                  <Text style={{ fontWeight: 'bold', color: Colors.textPrimary }}>{dashboard.draftQuotes || 0}</Text>
                 </View>
               </View>
             </Card>

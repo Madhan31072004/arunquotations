@@ -169,11 +169,15 @@ export const useDashboardStats = () => {
         
       const totalQuotes = quotes.length;
       const pendingQuotes = quotes.filter((q: any) => q.status === 'sent' || q.status === 'pending' || q.status === 'revised').length;
+      const approvedQuotes = quotes.filter((q: any) => q.status === 'approved').length;
+      const draftQuotes = quotes.filter((q: any) => q.status === 'draft').length;
       
       return {
         totalRevenue,
         totalQuotes,
         pendingQuotes,
+        approvedQuotes,
+        draftQuotes,
         activeClients: clients.length,
         recentQuotations: quotes.slice(0, 5),
       };

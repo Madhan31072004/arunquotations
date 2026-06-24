@@ -123,8 +123,16 @@ export default function PublicQuotationScreen() {
 
       </ScrollView>
 
-      {/* Action Footer */}
-      {q.status !== 'approved' && q.status !== 'rejected' && (
+      {/* Action Footer or Success Message */}
+      {q.status === 'approved' ? (
+        <View style={[styles.footer, { backgroundColor: Colors.successBg, alignItems: 'center', paddingVertical: Spacing.xl }]}>
+          <Ionicons name="checkmark-circle" size={48} color={Colors.success} style={{ marginBottom: Spacing.sm }} />
+          <Text style={{ fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.success }}>Quotation Approved!</Text>
+          <Text style={{ textAlign: 'center', fontSize: FontSize.md, color: Colors.textSecondary, marginTop: Spacing.sm, maxWidth: 400 }}>
+            Thanks for choosing {company?.companyName || 'Arun Interior Studio'}. We will start the next steps shortly!
+          </Text>
+        </View>
+      ) : q.status !== 'rejected' ? (
         <View style={styles.footer}>
           <Button 
             title={acceptQuotation.isPending ? "Approving..." : "Accept Quotation"} 
@@ -137,7 +145,7 @@ export default function PublicQuotationScreen() {
             By accepting, you agree to the terms and conditions.
           </Text>
         </View>
-      )}
+      ) : null}
     </View>
   );
 }
