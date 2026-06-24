@@ -68,7 +68,8 @@ export default function QuotationDetailScreen() {
   const handleWhatsApp = async () => {
     setShowShareMenu(false);
     const phone = q.clientId?.phone || '';
-    const publicLink = `https://arunquotations.vercel.app/view/quote/${q._id}`;
+    const baseUrl = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : (process.env.EXPO_PUBLIC_APP_URL || 'https://arunquotations.vercel.app');
+    const publicLink = `${baseUrl}/view/quote/${q._id}`;
     const text = `Hello ${q.clientId?.name || ''},\n\nHere is your quotation for: *${q.title}*\nTotal Amount: ${fmt(q.grandTotal)}\n\nView and Accept your quotation online here:\n${publicLink}\n\nPlease review it and let us know if you have any questions.\n\nBest Regards,\n${company?.companyName || 'Arun Interiors'}`;
     const url = `https://wa.me/${phone.replace(/\D/g,'')}?text=${encodeURIComponent(text)}`;
     Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open WhatsApp'));
