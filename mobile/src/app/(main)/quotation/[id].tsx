@@ -41,7 +41,8 @@ export default function QuotationDetailScreen() {
       } else {
         const { uri } = await Print.printToFileAsync({ html });
         const cleanName = `Quotation_${q.quotationNumber || 'Document'}.pdf`;
-        const newUri = `${FileSystem.cacheDirectory}${cleanName}`;
+        // @ts-ignore
+        const newUri = `${FileSystem.documentDirectory}${cleanName}`;
         await FileSystem.copyAsync({ from: uri, to: newUri });
         await Sharing.shareAsync(newUri, { UTI: '.pdf', mimeType: 'application/pdf' });
       }
@@ -88,7 +89,7 @@ export default function QuotationDetailScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.qTitle}>{q.title}</Text>
               <TouchableOpacity onPress={() => setShowStatusModal(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' }} activeOpacity={0.7}>
-                <Badge text={q.status} color={statusColors[q.status]} variant="soft" size="md" />
+                <Badge text={q.status} color={statusColors[q.status?.toLowerCase()] || Colors.primary} variant="soft" size="md" />
                 <Ionicons name="chevron-down-circle" size={16} color={Colors.textTertiary} />
               </TouchableOpacity>
             </View>
@@ -145,19 +146,19 @@ export default function QuotationDetailScreen() {
 
       <Modal visible={showStatusModal} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setShowStatusModal(false)}>
-          <View style={styles.modalContent}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>Change Status</Text>
             {Object.keys(statusColors).map((status) => (
               <TouchableOpacity
                 key={status}
-                style={[styles.statusOption, q.status === status && styles.statusOptionActive]}
+                style={[styles.statusOption, q.status?.toLowerCase() === status && styles.statusOptionActive]}
                 onPress={() => handleStatusChange(status)}
               >
-                <Badge text={status} color={statusColors[status]} variant={q.status === status ? "solid" : "soft"} size="md" />
-                {q.status === status && <Ionicons name="checkmark" size={20} color={statusColors[status]} />}
+                <Badge text={status} color={statusColors[status]} variant={q.status?.toLowerCase() === status ? "solid" : "soft"} size="md" />
+                {q.status?.toLowerCase() === status && <Ionicons name="checkmark" size={20} color={statusColors[status]} />}
               </TouchableOpacity>
             ))}
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </View>
