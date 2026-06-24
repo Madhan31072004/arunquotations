@@ -75,6 +75,19 @@ export const useCreateMaterial = () => {
   });
 };
 
+export const useDeleteMaterial = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete(`/materials/${id}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
+    },
+  });
+};
+
 // --- Quotations ---
 export const useQuotations = () => {
   return useQuery({

@@ -43,7 +43,15 @@ export function Header({ title, showBack, onBack, rightAction }: HeaderProps) {
         {/* Right */}
         <View style={styles.right}>
           {rightAction}
-          <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={styles.iconButton} 
+            activeOpacity={0.7}
+            onPress={() => {
+              import('expo-router').then(({ router }) => {
+                router.push('/(main)/notifications');
+              });
+            }}
+          >
             <Ionicons name="notifications-outline" size={22} color={Colors.textSecondary} />
           </TouchableOpacity>
         </View>

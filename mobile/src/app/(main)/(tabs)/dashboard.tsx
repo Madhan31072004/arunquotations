@@ -130,14 +130,22 @@ export default function DashboardScreen() {
               <Text style={styles.quickActionText}>New Quote</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.quickAction} activeOpacity={0.7}>
+            <TouchableOpacity 
+              style={styles.quickAction} 
+              activeOpacity={0.7}
+              onPress={() => router.push('/(main)/(tabs)/clients' as any)}
+            >
               <View style={[styles.quickActionIcon, { backgroundColor: Colors.infoBg }]}>
                 <Ionicons name="person-add" size={24} color={Colors.info} />
               </View>
               <Text style={styles.quickActionText}>Add Client</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.quickAction} activeOpacity={0.7}>
+            <TouchableOpacity 
+              style={styles.quickAction} 
+              activeOpacity={0.7}
+              onPress={() => router.push('/(main)/(tabs)/materials' as any)}
+            >
               <View style={[styles.quickActionIcon, { backgroundColor: Colors.successBg }]}>
                 <Ionicons name="cube" size={24} color={Colors.success} />
               </View>

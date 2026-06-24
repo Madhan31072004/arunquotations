@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/Input';
 import { Header } from '@/components/layout/Header';
 import { useResponsive } from '@/hooks/useResponsive';
 import { CURRENCY, MATERIAL_CATEGORIES } from '@/lib/constants';
-import { useMaterials, useCreateMaterial } from '@/features/data/apiHooks';
+import { useMaterials, useCreateMaterial, useDeleteMaterial } from '@/features/data/apiHooks';
+import { Alert } from 'react-native';
 
 export default function MaterialsScreen() {
   const { isMobile, isDesktop, contentPadding } = useResponsive();
@@ -26,6 +27,7 @@ export default function MaterialsScreen() {
 
   const { data: materials, isLoading } = useMaterials();
   const createMaterial = useCreateMaterial();
+  const deleteMaterial = useDeleteMaterial();
 
   const handleAddMaterial = async () => {
     if (!name || !unitPrice) return;
@@ -46,6 +48,21 @@ export default function MaterialsScreen() {
     const matchCategory = activeCategory === 'All' || m.category === activeCategory;
     return matchSearch && matchCategory;
   });
+
+  const handleDeleteMaterial = (id: string, name: string) => {
+    Alert.alert(
+      "Delete Material",
+      `Are you sure you want to delete ${name}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: () => deleteMaterial.mutate(id)
+        }
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -94,6 +111,13 @@ export default function MaterialsScreen() {
                   <View style={styles.priceBox}>
                     <Text style={styles.price}>{CURRENCY.symbol}{m.unitPrice}</Text>
                     <Text style={styles.unit}>/{m.unit}</Text>
+                    
+                    <TouchableOpacity 
+                      style={{ marginTop: Spacing.sm }}
+                      onPress={() => handleDeleteMaterial(m._id, m.name)}
+                    >
+                      <Ionicons name="trash-outline" size={18} color={Colors.error} />
+                    </TouchableOpacity>
                   </View>
                 </View>
               </Card>
