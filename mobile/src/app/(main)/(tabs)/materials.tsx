@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, FlatList, LayoutAnimation, UIManager, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '@/lib/theme';
 import { Card } from '@/components/ui/Card';
@@ -17,6 +17,12 @@ export default function MaterialsScreen() {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
 
   // Form state
   const [name, setName] = useState('');
@@ -64,6 +70,80 @@ export default function MaterialsScreen() {
     );
   };
 
+  const handleCategoryChange = (c: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setActiveCategory(c);
+  };
+
+  const handleSearchChange = (t: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSearch(t);
+  };
+
+  const renderHeader = () => (
+    <View style={{ paddingBottom: Spacing.md }}>
+      {isDesktop && (
+        <View style={styles.pageHeader}>
+          <View>
+            <Text style={styles.pageTitle}>Material Library</Text>
+            <Text style={styles.pageSub}>{materialList.length} materials</Text>
+          </View>
+          <Button title="Add Material" onPress={() => setShowModal(true)} icon={<Ionicons name="add" size={18} color={Colors.textInverse} />} />
+        </View>
+      )}
+
+      <View style={styles.searchBar}>
+        <Ionicons name="search-outline" size={20} color={Colors.textTertiary} />
+        <TextInput 
+          style={styles.searchInput} 
+          placeholder="Search materials..." 
+          placeholderTextColor={Colors.textTertiary} 
+          value={search} 
+          onChangeText={handleSearchChange} 
+          selectionColor={Colors.primary} 
+        />
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterContent}>
+        {categories.map((c) => (
+          <TouchableOpacity key={c} style={[styles.chip, activeCategory === c && styles.chipActive]} onPress={() => handleCategoryChange(c)} activeOpacity={0.7}>
+            <Text style={[styles.chipText, activeCategory === c && styles.chipTextActive]}>{c}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+  const renderItem = ({ item: m }: { item: any }) => (
+    <TouchableOpacity activeOpacity={0.7}>
+      <Card variant="default" padding="md" style={styles.card}>
+        <View style={styles.row}>
+          <View style={styles.iconBox}>
+            <Ionicons name="cube" size={22} color={Colors.primary} />
+          </View>
+          <View style={styles.info}>
+            <Text style={styles.name}>{m.name}</Text>
+            <View style={styles.metaRow}>
+              <Badge text={m.category} color={Colors.info} variant="soft" size="sm" />
+              <Text style={styles.brand}>{m.brand}</Text>
+            </View>
+          </View>
+          <View style={styles.priceBox}>
+            <Text style={styles.price}>{CURRENCY.symbol}{m.unitPrice}</Text>
+            <Text style={styles.unit}>/{m.unit}</Text>
+            
+            <TouchableOpacity 
+              style={{ marginTop: Spacing.sm }}
+              onPress={() => handleDeleteMaterial(m._id, m.name)}
+            >
+              <Ionicons name="trash-outline" size={18} color={Colors.error} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Card>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
       {isMobile && (
@@ -76,64 +156,22 @@ export default function MaterialsScreen() {
           }
         />
       )}
-      <ScrollView contentContainerStyle={[styles.scroll, { padding: contentPadding }]} showsVerticalScrollIndicator={false}>
-        {isDesktop && (
-          <View style={styles.pageHeader}>
-            <View>
-              <Text style={styles.pageTitle}>Material Library</Text>
-              <Text style={styles.pageSub}>{materialList.length} materials</Text>
-            </View>
-            <Button title="Add Material" onPress={() => setShowModal(true)} icon={<Ionicons name="add" size={18} color={Colors.textInverse} />} />
-          </View>
-        )}
-
-        <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={20} color={Colors.textTertiary} />
-          <TextInput style={styles.searchInput} placeholder="Search materials..." placeholderTextColor={Colors.textTertiary} value={search} onChangeText={setSearch} selectionColor={Colors.primary} />
-        </View>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterContent}>
-          {categories.map((c) => (
-            <TouchableOpacity key={c} style={[styles.chip, activeCategory === c && styles.chipActive]} onPress={() => setActiveCategory(c)} activeOpacity={0.7}>
-              <Text style={[styles.chipText, activeCategory === c && styles.chipTextActive]}>{c}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {isLoading ? (
-          <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
-        ) : (
-          filtered.map((m: any) => (
-            <TouchableOpacity key={m._id} activeOpacity={0.7}>
-              <Card variant="default" padding="md" style={styles.card}>
-                <View style={styles.row}>
-                  <View style={styles.iconBox}>
-                    <Ionicons name="cube" size={22} color={Colors.primary} />
-                  </View>
-                  <View style={styles.info}>
-                    <Text style={styles.name}>{m.name}</Text>
-                    <View style={styles.metaRow}>
-                      <Badge text={m.category} color={Colors.info} variant="soft" size="sm" />
-                      <Text style={styles.brand}>{m.brand}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.priceBox}>
-                    <Text style={styles.price}>{CURRENCY.symbol}{m.unitPrice}</Text>
-                    <Text style={styles.unit}>/{m.unit}</Text>
-                    
-                    <TouchableOpacity 
-                      style={{ marginTop: Spacing.sm }}
-                      onPress={() => handleDeleteMaterial(m._id, m.name)}
-                    >
-                      <Ionicons name="trash-outline" size={18} color={Colors.error} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </Card>
-            </TouchableOpacity>
-          ))
-        )}
-      </ScrollView>
+      
+      {isLoading ? (
+        <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item._id}
+          renderItem={renderItem}
+          ListHeaderComponent={renderHeader}
+          contentContainerStyle={[styles.scroll, { padding: contentPadding }]}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+        />
+      )}
 
       <Modal visible={showModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
