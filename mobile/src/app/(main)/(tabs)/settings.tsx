@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Header } from '@/components/layout/Header';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/authStore';
 import { useCompanyProfile, useUpdateCompanyProfile, useUpdateUser } from '@/features/data/apiHooks';
 import { APP_NAME, APP_VERSION } from '@/lib/constants';
@@ -39,6 +40,7 @@ const settingsSections = [
 ];
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { isMobile, isDesktop, contentPadding } = useResponsive();
   const { logout, user } = useAuthStore();
   const { data: company, isLoading } = useCompanyProfile();
@@ -138,6 +140,11 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/(auth)/login' as any);
+  };
+
   const handleSettingPress = (item: any) => {
     if (item.label === 'Company Details') return setShowCompanyModal(true);
     if (item.label === 'Logo & Branding') return setShowBrandingModal(true);
@@ -185,7 +192,7 @@ export default function SettingsScreen() {
           </View>
         ))}
 
-        <Button title="Sign Out" onPress={logout} variant="danger" fullWidth size="lg" style={{ marginTop: Spacing.xxl }} icon={<Ionicons name="log-out-outline" size={20} color="#FFF" />} />
+        <Button title="Sign Out" onPress={handleLogout} variant="danger" fullWidth size="lg" style={{ marginTop: Spacing.xxl }} icon={<Ionicons name="log-out-outline" size={20} color="#FFF" />} />
 
         <Text style={styles.version}>{APP_NAME} v{APP_VERSION}</Text>
       </ScrollView>
