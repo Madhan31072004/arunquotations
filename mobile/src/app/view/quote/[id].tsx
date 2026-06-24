@@ -41,24 +41,36 @@ export default function PublicQuotationScreen() {
   const fmt = (n: number) => `${CURRENCY.symbol}${(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
   const handleAccept = async () => {
-    Alert.alert(
-      "Accept Quotation",
-      "Are you sure you want to approve this quotation? This will notify the designer.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Accept", 
-          onPress: async () => {
-            try {
-              await acceptQuotation.mutateAsync(q._id);
-              Alert.alert('Success', 'Quotation approved successfully!');
-            } catch (e) {
-              Alert.alert('Error', 'Failed to approve quotation. Please try again.');
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm("Are you sure you want to approve this quotation? This will notify the designer.");
+      if (confirmed) {
+        try {
+          await acceptQuotation.mutateAsync(q._id);
+          window.alert('Quotation approved successfully!');
+        } catch (e) {
+          window.alert('Failed to approve quotation. Please try again.');
+        }
+      }
+    } else {
+      Alert.alert(
+        "Accept Quotation",
+        "Are you sure you want to approve this quotation? This will notify the designer.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Accept", 
+            onPress: async () => {
+              try {
+                await acceptQuotation.mutateAsync(q._id);
+                Alert.alert('Success', 'Quotation approved successfully!');
+              } catch (e) {
+                Alert.alert('Error', 'Failed to approve quotation. Please try again.');
+              }
             }
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
 
   return (
