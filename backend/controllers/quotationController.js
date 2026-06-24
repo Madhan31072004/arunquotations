@@ -162,7 +162,7 @@ exports.sendQuotationEmail = async (req, res) => {
       },
     });
 
-    const publicLink = `https://arunquotations.vercel.app/public/quote/${quotation._id}`;
+    const publicLink = `https://arunquotations.vercel.app/view/quote/${quotation._id}`;
 
     const mailOptions = {
       from: `"Arun Interiors" <${emailUser}>`,
