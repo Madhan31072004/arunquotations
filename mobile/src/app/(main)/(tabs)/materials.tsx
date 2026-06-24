@@ -82,7 +82,7 @@ export default function MaterialsScreen() {
 
   const renderHeader = () => (
     <View style={{ paddingBottom: Spacing.md }}>
-      {isDesktop && (
+      {!isMobile && (
         <View style={styles.pageHeader}>
           <View>
             <Text style={styles.pageTitle}>Material Library</Text>

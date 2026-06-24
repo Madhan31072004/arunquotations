@@ -84,7 +84,7 @@ export default function QuotationsScreen() {
   const renderHeader = () => (
     <View style={{ paddingBottom: Spacing.md }}>
       {/* Desktop header */}
-      {isDesktop && (
+      {!isMobile && (
         <View style={styles.pageHeader}>
           <View>
             <Text style={styles.pageTitle}>Quotations</Text>
