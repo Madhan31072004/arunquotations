@@ -7,40 +7,31 @@ import { Header } from '@/components/layout/Header';
 import { useResponsive } from '@/hooks/useResponsive';
 import { Card } from '@/components/ui/Card';
 
+import { ActivityIndicator } from 'react-native';
+import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from '@/features/data/apiHooks';
+
 export default function NotificationsScreen() {
   const router = useRouter();
   const { isMobile, contentPadding, isDesktop } = useResponsive();
 
-  // Mock notifications
-  const notifications = [
-    {
-      id: '1',
-      title: 'Welcome to Arun Quotations',
-      message: 'Get started by adding your first client and creating a quotation.',
-      time: 'Just now',
-      icon: 'sparkles',
-      color: Colors.primary,
-      read: false,
-    },
-    {
-      id: '2',
-      title: 'New Feature Available',
-      message: 'You can now customize your PDF templates from the settings page.',
-      time: '2 hours ago',
-      icon: 'color-wand',
-      color: Colors.info,
-      read: true,
-    },
-    {
-      id: '3',
-      title: 'System Update',
-      message: 'The application was updated to version 1.0.0 successfully.',
-      time: '1 day ago',
-      icon: 'build',
-      color: Colors.success,
-      read: true,
+  const { data: notificationsData, isLoading } = useNotifications();
+  const markAsRead = useMarkNotificationRead();
+  const markAllAsRead = useMarkAllNotificationsRead();
+
+  const notifications = notificationsData || [];
+
+  const handleMarkAsRead = (id: string, isRead: boolean) => {
+    if (!isRead) {
+      markAsRead.mutate(id);
     }
-  ];
+  };
+
+  const handleMarkAllAsRead = () => {
+    const hasUnread = notifications.some((n: any) => !n.isRead);
+    if (hasUnread) {
+      markAllAsRead.mutate();
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -62,30 +53,40 @@ export default function NotificationsScreen() {
         {isDesktop && (
           <View style={styles.pageHeader}>
             <Text style={styles.pageTitle}>Notifications</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={handleMarkAllAsRead}>
               <Text style={styles.markAllRead}>Mark all as read</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        <View style={styles.list}>
-          {notifications.map((notif) => (
-            <Card key={notif.id} variant="default" padding="md" style={[styles.card, !notif.read && styles.unreadCard] as any}>
-              <View style={styles.row}>
-                <View style={[styles.iconBox, { backgroundColor: `${notif.color}15` }]}>
-                  <Ionicons name={notif.icon as any} size={22} color={notif.color} />
-                </View>
-                <View style={styles.content}>
-                  <View style={styles.headerRow}>
-                    <Text style={[styles.title, !notif.read && styles.unreadText]}>{notif.title}</Text>
-                    <Text style={styles.time}>{notif.time}</Text>
-                  </View>
-                  <Text style={styles.message}>{notif.message}</Text>
-                </View>
-              </View>
-            </Card>
-          ))}
-        </View>
+        {isLoading ? (
+          <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
+        ) : (
+          <>
+            <View style={styles.list}>
+              {notifications.map((notif: any) => (
+                <TouchableOpacity 
+                  key={notif._id} 
+                  activeOpacity={0.7} 
+                  onPress={() => handleMarkAsRead(notif._id, notif.isRead)}
+                >
+                  <Card variant="default" padding="md" style={[styles.card, !notif.isRead && styles.unreadCard] as any}>
+                    <View style={styles.row}>
+                      <View style={[styles.iconBox, { backgroundColor: `${notif.color}15` }]}>
+                        <Ionicons name={notif.icon as any} size={22} color={notif.color} />
+                      </View>
+                      <View style={styles.content}>
+                        <View style={styles.headerRow}>
+                          <Text style={[styles.title, !notif.isRead && styles.unreadText]}>{notif.title}</Text>
+                          <Text style={styles.time}>{new Date(notif.createdAt).toLocaleDateString()}</Text>
+                        </View>
+                        <Text style={styles.message}>{notif.message}</Text>
+                      </View>
+                    </View>
+                  </Card>
+                </TouchableOpacity>
+              ))}
+            </View>
 
         {notifications.length === 0 && (
           <View style={styles.emptyState}>
@@ -93,6 +94,8 @@ export default function NotificationsScreen() {
             <Text style={styles.emptyTitle}>No Notifications</Text>
             <Text style={styles.emptyMessage}>You're all caught up!</Text>
           </View>
+        )}
+          </>
         )}
       </ScrollView>
     </View>

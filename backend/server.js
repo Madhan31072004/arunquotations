@@ -31,6 +31,7 @@ app.use('/api/materials', require('./routes/materialRoutes'));
 app.use('/api/quotations', require('./routes/quotationRoutes'));
 app.use('/api/company', require('./routes/companyRoutes'));
 app.use('/api/contact', require('./routes/contactRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => {

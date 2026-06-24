@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, FontWeight, Spacing, Layout } from '@/lib/theme';
@@ -46,11 +47,7 @@ export function Header({ title, showBack, onBack, rightAction }: HeaderProps) {
           <TouchableOpacity 
             style={styles.iconButton} 
             activeOpacity={0.7}
-            onPress={() => {
-              import('expo-router').then(({ router }) => {
-                router.push('/(main)/notifications');
-              });
-            }}
+            onPress={() => router.push('/(main)/notifications')}
           >
             <Ionicons name="notifications-outline" size={22} color={Colors.textSecondary} />
           </TouchableOpacity>
