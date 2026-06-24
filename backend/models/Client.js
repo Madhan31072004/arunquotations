@@ -7,6 +7,7 @@ const clientSchema = new mongoose.Schema({
   phone: { type: String, trim: true, default: '' },
   address: { type: String, default: '' },
   projectName: { type: String, default: '' },
+  revenue: { type: Number, default: 0 },
   notes: { type: String, default: '' },
 }, { timestamps: true });
 

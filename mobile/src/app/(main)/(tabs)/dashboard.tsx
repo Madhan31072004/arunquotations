@@ -17,13 +17,35 @@ import { Button } from '@/components/ui/Button';
 import { Header } from '@/components/layout/Header';
 import { useResponsive } from '@/hooks/useResponsive';
 import { CURRENCY } from '@/lib/constants';
-import { useDashboardStats } from '@/features/data/apiHooks';
-import { ActivityIndicator } from 'react-native';
+import { useDashboardStats, useClients, useUpdateClient } from '@/features/data/apiHooks';
+import { ActivityIndicator, Modal, TextInput, Pressable, Alert } from 'react-native';
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isMobile, isDesktop, contentPadding } = useResponsive();
   const { data: dashboard, isLoading } = useDashboardStats();
+  const { data: clients } = useClients();
+  const updateClient = useUpdateClient();
+
+  const [showRevenueModal, setShowRevenueModal] = React.useState(false);
+  const [selectedClientId, setSelectedClientId] = React.useState('');
+  const [revenueInput, setRevenueInput] = React.useState('');
+
+  const handleLogRevenue = async () => {
+    if (!selectedClientId) return Alert.alert('Error', 'Please select a client');
+    try {
+      await updateClient.mutateAsync({
+        id: selectedClientId,
+        data: { revenue: Number(revenueInput) || 0 }
+      });
+      setShowRevenueModal(false);
+      setRevenueInput('');
+      setSelectedClientId('');
+      Alert.alert('Success', 'Revenue logged successfully');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to log revenue');
+    }
+  };
 
   const formatAmount = (amount: number) => {
     if (amount >= 100000) {
@@ -86,11 +108,19 @@ export default function DashboardScreen() {
               </Text>
               <Text style={styles.pageTitle}>Dashboard Overview</Text>
             </View>
-            <Button
-              title="New Quotation"
-              onPress={() => router.push('/(main)/quotation/create' as any)}
-              icon={<Ionicons name="add" size={20} color={Colors.textInverse} />}
-            />
+            <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+              <Button
+                title="Log Revenue"
+                variant="outline"
+                onPress={() => setShowRevenueModal(true)}
+                icon={<Ionicons name="cash" size={20} color={Colors.primary} />}
+              />
+              <Button
+                title="New Quotation"
+                onPress={() => router.push('/(main)/quotation/create' as any)}
+                icon={<Ionicons name="add" size={20} color={Colors.textInverse} />}
+              />
+            </View>
           </View>
         )}
 
@@ -153,6 +183,17 @@ export default function DashboardScreen() {
               </View>
               <Text style={styles.quickActionText}>Materials</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.quickAction} 
+              activeOpacity={0.7}
+              onPress={() => setShowRevenueModal(true)}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: Colors.warningBg }]}>
+                <Ionicons name="cash" size={24} color={Colors.warning} />
+              </View>
+              <Text style={styles.quickActionText}>Log Revenue</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -196,6 +237,44 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {/* Log Revenue Modal */}
+      <Modal visible={showRevenueModal} transparent animationType="fade" onRequestClose={() => setShowRevenueModal(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowRevenueModal(false)}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Log Client Revenue</Text>
+              <TouchableOpacity onPress={() => setShowRevenueModal(false)}><Ionicons name="close" size={24} color={Colors.textSecondary} /></TouchableOpacity>
+            </View>
+            
+            <View style={{ padding: Spacing.lg }}>
+              <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginBottom: Spacing.xs }}>Select Client</Text>
+              <ScrollView style={{ maxHeight: 150, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.sm, marginBottom: Spacing.md }}>
+                {clients?.map((c: any) => (
+                  <TouchableOpacity
+                    key={c._id}
+                    style={{ padding: Spacing.sm, borderBottomWidth: 1, borderBottomColor: Colors.border, backgroundColor: selectedClientId === c._id ? Colors.primaryGlow : 'transparent' }}
+                    onPress={() => setSelectedClientId(c._id)}
+                  >
+                    <Text style={{ color: selectedClientId === c._id ? Colors.primary : Colors.textPrimary }}>{c.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginBottom: Spacing.xs }}>Revenue Amount (₹)</Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.sm, padding: Spacing.sm, fontSize: FontSize.md, backgroundColor: Colors.surfaceHover, marginBottom: Spacing.lg }}
+                placeholder="e.g. 50000"
+                value={revenueInput}
+                onChangeText={setRevenueInput}
+                keyboardType="numeric"
+              />
+
+              <Button title={updateClient.isPending ? "Saving..." : "Save Revenue"} onPress={handleLogRevenue} disabled={updateClient.isPending} />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -365,4 +444,10 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     marginTop: Spacing.xs,
   },
+  
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, width: '90%', maxWidth: 400, borderWidth: 1, borderColor: Colors.border },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  modalTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary },
 });

@@ -164,9 +164,7 @@ export const useDashboardStats = () => {
       const quotes = quotesRes.data;
       const clients = clientsRes.data;
       
-      const totalRevenue = quotes
-        .filter((q: any) => q.status === 'approved')
-        .reduce((sum: number, q: any) => sum + q.grandTotal, 0);
+      const totalRevenue = clients.reduce((sum: number, c: any) => sum + (c.revenue || 0), 0);
         
       const totalQuotes = quotes.length;
       const pendingQuotes = quotes.filter((q: any) => q.status === 'sent' || q.status === 'pending' || q.status === 'revised').length;
@@ -249,6 +247,16 @@ export const useMarkAllNotificationsRead = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+};
+
+// --- Settings Export ---
+export const useExportData = () => {
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.get('/export');
+      return data;
     },
   });
 };

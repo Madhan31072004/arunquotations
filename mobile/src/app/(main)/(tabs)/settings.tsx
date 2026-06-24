@@ -9,8 +9,10 @@ import { Header } from '@/components/layout/Header';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/authStore';
-import { useCompanyProfile, useUpdateCompanyProfile, useUpdateUser } from '@/features/data/apiHooks';
+import { useCompanyProfile, useUpdateCompanyProfile, useUpdateUser, useExportData } from '@/features/data/apiHooks';
 import { APP_NAME, APP_VERSION } from '@/lib/constants';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 const settingsSections = [
   {
@@ -46,6 +48,7 @@ export default function SettingsScreen() {
   const { data: company, isLoading } = useCompanyProfile();
   const updateCompany = useUpdateCompanyProfile();
   const updateUser = useUpdateUser();
+  const exportData = useExportData();
 
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showBrandingModal, setShowBrandingModal] = useState(false);
@@ -145,6 +148,34 @@ export default function SettingsScreen() {
     router.replace('/(auth)/login' as any);
   };
 
+  const handleExport = async () => {
+    try {
+      const data = await exportData.mutateAsync();
+      const jsonString = JSON.stringify(data, null, 2);
+      const fileName = `ArunQuotations_Backup_${new Date().toISOString().split('T')[0]}.json`;
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        // @ts-ignore
+        const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+        await FileSystem.writeAsStringAsync(fileUri, jsonString, { encoding: FileSystem.EncodingType.UTF8 });
+        await Sharing.shareAsync(fileUri, { mimeType: 'application/json', dialogTitle: 'Export Backup' });
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to export data');
+    }
+  };
+
   const handleSettingPress = (item: any) => {
     if (item.label === 'Company Details') return setShowCompanyModal(true);
     if (item.label === 'Logo & Branding') return setShowBrandingModal(true);
@@ -154,6 +185,7 @@ export default function SettingsScreen() {
     if (item.label === 'PDF Theme') return setShowThemeModal(true);
     if (item.label === 'Profile') return setShowProfileModal(true);
     if (item.label === 'Security') return setShowSecurityModal(true);
+    if (item.label === 'Backup & Export') return handleExport();
     
     if (Platform.OS === 'web') {
       window.alert(`${item.label} feature is coming soon.`);

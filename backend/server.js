@@ -32,6 +32,7 @@ app.use('/api/quotations', require('./routes/quotationRoutes'));
 app.use('/api/company', require('./routes/companyRoutes'));
 app.use('/api/contact', require('./routes/contactRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/export', require('./routes/exportRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => {
