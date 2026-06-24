@@ -64,23 +64,7 @@ export default function QuotationsScreen() {
     return `${CURRENCY.symbol}${amount.toLocaleString('en-IN')}`;
   };
 
-  return (
-    <View style={styles.container}>
-      {isMobile && (
-        <Header
-          title="Quotations"
-          rightAction={
-            <Button
-              title=""
-              onPress={() => router.push('/(main)/quotation/create' as any)}
-              variant="primary"
-              size="sm"
-              icon={<Ionicons name="add" size={20} color={Colors.textInverse} />}
-              style={{ width: 40, height: 40, borderRadius: 20, paddingHorizontal: 0 }}
-            />
-          }
-        />
-      )}
+
 
   const handleFilterChange = (f: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -227,8 +211,8 @@ export default function QuotationsScreen() {
           data={filtered}
           keyExtractor={(item) => item._id}
           renderItem={renderItem}
-          ListHeaderComponent={renderHeader}
-          ListEmptyComponent={renderEmpty}
+          ListHeaderComponent={renderHeader()}
+          ListEmptyComponent={renderEmpty()}
           contentContainerStyle={[styles.scrollContent, { padding: contentPadding }]}
           showsVerticalScrollIndicator={false}
           initialNumToRender={10}

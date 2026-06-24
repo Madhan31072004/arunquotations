@@ -164,7 +164,7 @@ export default function MaterialsScreen() {
           data={filtered}
           keyExtractor={(item) => item._id}
           renderItem={renderItem}
-          ListHeaderComponent={renderHeader}
+          ListHeaderComponent={renderHeader()}
           contentContainerStyle={[styles.scroll, { padding: contentPadding }]}
           showsVerticalScrollIndicator={false}
           initialNumToRender={10}
