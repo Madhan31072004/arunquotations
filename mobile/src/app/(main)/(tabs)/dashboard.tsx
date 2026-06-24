@@ -81,7 +81,9 @@ export default function DashboardScreen() {
         {isDesktop && (
           <View style={styles.pageHeader}>
             <View>
-              <Text style={styles.greeting}>Good evening 👋</Text>
+              <Text style={styles.greeting}>
+                {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'} 👋
+              </Text>
               <Text style={styles.pageTitle}>Dashboard Overview</Text>
             </View>
             <Button
