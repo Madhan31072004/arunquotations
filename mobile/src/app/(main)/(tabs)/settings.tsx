@@ -13,6 +13,7 @@ import { useCompanyProfile, useUpdateCompanyProfile, useUpdateUser, useExportDat
 import { APP_NAME, APP_VERSION } from '@/lib/constants';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { useQueryClient } from '@tanstack/react-query';
 
 const settingsSections = [
   {
@@ -56,6 +57,7 @@ export default function SettingsScreen() {
   const changePassword = useChangePassword();
   const serverLogout = useServerLogout();
   const forceSignOutAll = useForceSignOutAll();
+  const queryClient = useQueryClient();
 
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showBrandingModal, setShowBrandingModal] = useState(false);
@@ -170,8 +172,11 @@ export default function SettingsScreen() {
       const result = await changePassword.mutateAsync({ currentPassword: curPassword, newPassword });
       // Save the new token (old one is now invalid due to tokenVersion bump)
       if (result.token && user) {
-        setAuth(user, result.token);
+        await setAuth(user, result.token);
       }
+      // Manually invalidate sessions now that the new token is saved
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      
       setCurPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -205,8 +210,11 @@ export default function SettingsScreen() {
       const result = await forceSignOutAll.mutateAsync();
       // Save the new token (old one is now invalid)
       if (result.token && user) {
-        setAuth(user, result.token);
+        await setAuth(user, result.token);
       }
+      // Manually invalidate sessions now that the new token is saved
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      
       Alert.alert('Done', result.message);
     } catch (e) {
       Alert.alert('Error', 'Failed to sign out all devices');
