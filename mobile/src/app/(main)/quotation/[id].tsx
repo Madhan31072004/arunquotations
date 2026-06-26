@@ -15,6 +15,7 @@ import { generateQuotationHTML, printHtmlToPdfWeb } from '@/lib/pdfTemplate';
 import { useQuotation, useCompanyProfile, useUpdateQuotation, useSendQuotationEmail } from '@/features/data/apiHooks';
 import { ActivityIndicator, Alert, Modal, Pressable, Linking, TextInput } from 'react-native';
 import * as FileSystem from 'expo-file-system';
+import * as Clipboard from 'expo-clipboard';
 
 const statusColors: Record<string, string> = {
   draft: Colors.statusDraft, sent: Colors.statusSent, pending: '#f59e0b',
@@ -65,11 +66,15 @@ export default function QuotationDetailScreen() {
     }
   };
 
+  const getPublicLink = () => {
+    const baseUrl = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : (process.env.EXPO_PUBLIC_APP_URL || 'https://arunquotations.vercel.app');
+    return `${baseUrl}/view/quote/${q._id}`;
+  };
+
   const handleWhatsApp = async () => {
     setShowShareMenu(false);
     const phone = q.clientId?.phone || '';
-    const baseUrl = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : (process.env.EXPO_PUBLIC_APP_URL || 'https://arunquotations.vercel.app');
-    const publicLink = `${baseUrl}/view/quote/${q._id}`;
+    const publicLink = getPublicLink();
     const text = `Hello ${q.clientId?.name || ''},\n\nHere is your quotation for: *${q.title}*\nTotal Amount: ${fmt(q.grandTotal)}\n\nView and Accept your quotation online here:\n${publicLink}\n\nPlease review it and let us know if you have any questions.\n\nBest Regards,\n${company?.companyName || 'Arun Interiors'}`;
     const url = `https://wa.me/${phone.replace(/\D/g,'')}?text=${encodeURIComponent(text)}`;
     Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open WhatsApp'));
@@ -95,6 +100,17 @@ export default function QuotationDetailScreen() {
     } catch (error) {
       Alert.alert('Error', 'Failed to send email. Check your business email credentials.');
     }
+  };
+
+  const handleCopyLink = async () => {
+    await Clipboard.setStringAsync(getPublicLink());
+    Alert.alert('Success', 'Public link copied to clipboard');
+    setShowShareMenu(false);
+  };
+
+  const handleOpenLink = () => {
+    Linking.openURL(getPublicLink()).catch(() => Alert.alert('Error', 'Could not open link'));
+    setShowShareMenu(false);
   };
 
   if (isLoading || !q) {
@@ -259,6 +275,20 @@ export default function QuotationDetailScreen() {
               <TouchableOpacity style={[styles.statusOption, { paddingVertical: Spacing.sm }]} onPress={handleWhatsApp}>
                 <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
                 <Text style={{ flex: 1, marginLeft: 12, fontSize: FontSize.md, color: Colors.textPrimary }}>Send to {q.clientId?.phone || 'Client'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ marginBottom: Spacing.lg }}>
+              <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginBottom: Spacing.sm }}>
+                Web Links
+              </Text>
+              <TouchableOpacity style={[styles.statusOption, { paddingVertical: Spacing.sm }]} onPress={handleCopyLink}>
+                <Ionicons name="link-outline" size={20} color={Colors.primary} />
+                <Text style={{ flex: 1, marginLeft: 12, fontSize: FontSize.md, color: Colors.textPrimary }}>Copy Public Link</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.statusOption, { paddingVertical: Spacing.sm, borderBottomWidth: 0 }]} onPress={handleOpenLink}>
+                <Ionicons name="globe-outline" size={20} color={Colors.primary} />
+                <Text style={{ flex: 1, marginLeft: 12, fontSize: FontSize.md, color: Colors.textPrimary }}>Open in Browser</Text>
               </TouchableOpacity>
             </View>
 
