@@ -82,7 +82,19 @@ export function Sidebar() {
       {/* Bottom section */}
       <View style={styles.bottomSection}>
         <View style={styles.divider} />
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+        <TouchableOpacity 
+          style={styles.navItem} 
+          activeOpacity={0.7}
+          onPress={() => {
+            if (Platform.OS === 'web') {
+              window.alert('Please contact the administrator for support at support@arunquotations.com');
+            } else {
+              import('react-native').then(({ Alert }) => {
+                Alert.alert('Help & Support', 'Please contact the administrator for support at support@arunquotations.com');
+              });
+            }
+          }}
+        >
           <View style={styles.navIconWrapper}>
             <Ionicons name="help-circle-outline" size={20} color={Colors.textTertiary} />
           </View>
