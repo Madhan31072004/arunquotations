@@ -219,6 +219,63 @@ export const useUpdateUser = () => {
   });
 };
 
+// --- Sessions (Device Management) ---
+export const useSessions = () => {
+  return useQuery({
+    queryKey: ['sessions'],
+    queryFn: async () => {
+      const { data } = await api.get('/auth/sessions');
+      return data;
+    },
+  });
+};
+
+export const useRevokeSession = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      const { data } = await api.delete(`/auth/sessions/${sessionId}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    },
+  });
+};
+
+export const useRevokeAllSessions = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.delete('/auth/sessions/all');
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    },
+  });
+};
+
+// --- Password Change ---
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      const res = await api.put('/auth/change-password', data);
+      return res.data;
+    },
+  });
+};
+
+// --- Server-side Logout ---
+export const useServerLogout = () => {
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post('/auth/logout');
+      return data;
+    },
+  });
+};
+
 // --- Notifications ---
 export const useNotifications = () => {
   return useQuery({

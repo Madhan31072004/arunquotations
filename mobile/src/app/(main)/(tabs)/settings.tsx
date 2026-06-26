@@ -9,7 +9,7 @@ import { Header } from '@/components/layout/Header';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/authStore';
-import { useCompanyProfile, useUpdateCompanyProfile, useUpdateUser, useExportData } from '@/features/data/apiHooks';
+import { useCompanyProfile, useUpdateCompanyProfile, useUpdateUser, useExportData, useSessions, useRevokeSession, useRevokeAllSessions, useChangePassword, useServerLogout } from '@/features/data/apiHooks';
 import { APP_NAME, APP_VERSION } from '@/lib/constants';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -35,7 +35,8 @@ const settingsSections = [
     title: 'Account',
     items: [
       { icon: 'person-outline' as const, label: 'Profile', sub: 'Name, email, phone' },
-      { icon: 'shield-outline' as const, label: 'Security', sub: 'Change password' },
+      { icon: 'key-outline' as const, label: 'Change Password', sub: 'Update your login password' },
+      { icon: 'phone-portrait-outline' as const, label: 'Active Devices', sub: 'Manage logged-in sessions' },
       { icon: 'cloud-upload-outline' as const, label: 'Backup & Export', sub: 'Export data, backup' },
     ],
   },
@@ -49,6 +50,11 @@ export default function SettingsScreen() {
   const updateCompany = useUpdateCompanyProfile();
   const updateUser = useUpdateUser();
   const exportData = useExportData();
+  const { data: sessions, isLoading: sessionsLoading, refetch: refetchSessions } = useSessions();
+  const revokeSession = useRevokeSession();
+  const revokeAllSessions = useRevokeAllSessions();
+  const changePassword = useChangePassword();
+  const serverLogout = useServerLogout();
 
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showBrandingModal, setShowBrandingModal] = useState(false);
@@ -57,7 +63,13 @@ export default function SettingsScreen() {
   const [showFormatModal, setShowFormatModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDevicesModal, setShowDevicesModal] = useState(false);
+
+  const [curPassword, setCurPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwError, setPwError] = useState('');
 
   const [cName, setCName] = useState('');
   const [cAddress, setCAddress] = useState('');
@@ -77,7 +89,6 @@ export default function SettingsScreen() {
   const [uName, setUName] = useState('');
   const [uEmail, setUEmail] = useState('');
   const [uPhone, setUPhone] = useState('');
-  const [uPassword, setUPassword] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -131,11 +142,8 @@ export default function SettingsScreen() {
     try {
       await updateUser.mutateAsync({
         name: uName, email: uEmail, phone: uPhone,
-        ...(uPassword ? { password: uPassword } : {})
       });
       setShowProfileModal(false);
-      setShowSecurityModal(false);
-      setUPassword('');
       Alert.alert('Success', 'Profile updated successfully.');
     } catch (e) {
       console.error(e);
@@ -143,7 +151,52 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleChangePassword = async () => {
+    setPwError('');
+    if (!curPassword || !newPassword) {
+      setPwError('Please fill in all fields');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPwError('New password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPwError('New passwords do not match');
+      return;
+    }
+    try {
+      await changePassword.mutateAsync({ currentPassword: curPassword, newPassword });
+      setCurPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordModal(false);
+      Alert.alert('Success', 'Password updated. All other devices have been signed out.');
+    } catch (e: any) {
+      setPwError(e.response?.data?.message || 'Failed to change password');
+    }
+  };
+
+  const handleRevokeDevice = async (sessionId: string) => {
+    try {
+      await revokeSession.mutateAsync(sessionId);
+      Alert.alert('Done', 'Device has been signed out.');
+    } catch (e: any) {
+      Alert.alert('Error', e.response?.data?.message || 'Failed to sign out device');
+    }
+  };
+
+  const handleRevokeAll = async () => {
+    try {
+      const result = await revokeAllSessions.mutateAsync();
+      Alert.alert('Done', result.message);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to sign out devices');
+    }
+  };
+
   const handleLogout = async () => {
+    try { await serverLogout.mutateAsync(); } catch {}
     await logout();
     router.replace('/(auth)/login' as any);
   };
@@ -184,7 +237,8 @@ export default function SettingsScreen() {
     if (item.label === 'Quotation Format') return setShowFormatModal(true);
     if (item.label === 'PDF Theme') return setShowThemeModal(true);
     if (item.label === 'Profile') return setShowProfileModal(true);
-    if (item.label === 'Security') return setShowSecurityModal(true);
+    if (item.label === 'Change Password') return setShowPasswordModal(true);
+    if (item.label === 'Active Devices') { refetchSessions(); return setShowDevicesModal(true); }
     if (item.label === 'Backup & Export') return handleExport();
     
     if (Platform.OS === 'web') {
@@ -358,19 +412,72 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
-      {/* Security Modal */}
-      <Modal visible={showSecurityModal} transparent animationType="fade">
+      {/* Change Password Modal */}
+      <Modal visible={showPasswordModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Security</Text>
-              <TouchableOpacity onPress={() => setShowSecurityModal(false)}><Ionicons name="close" size={24} color={Colors.textSecondary} /></TouchableOpacity>
+              <Text style={styles.modalTitle}>Change Password</Text>
+              <TouchableOpacity onPress={() => { setShowPasswordModal(false); setPwError(''); setCurPassword(''); setNewPassword(''); setConfirmPassword(''); }}><Ionicons name="close" size={24} color={Colors.textSecondary} /></TouchableOpacity>
             </View>
             <View style={{ padding: Spacing.lg }}>
-              <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginBottom: Spacing.sm }}>Enter a new password to change your login credentials.</Text>
-              <Input label="New Password" placeholder="••••••••" value={uPassword} onChangeText={setUPassword} secureTextEntry />
-              <Button title={updateUser.isPending ? "Updating..." : "Update Password"} onPress={handleSaveUser} disabled={updateUser.isPending} style={{ marginTop: Spacing.lg }} />
+              {pwError ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.errorBg, borderRadius: BorderRadius.md, padding: Spacing.md, marginBottom: Spacing.md, gap: Spacing.sm, borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' }}>
+                  <Ionicons name="alert-circle" size={18} color={Colors.error} />
+                  <Text style={{ fontSize: FontSize.sm, color: Colors.error, flex: 1 }}>{pwError}</Text>
+                </View>
+              ) : null}
+              <Input label="Current Password" placeholder="Enter current password" value={curPassword} onChangeText={setCurPassword} secureTextEntry />
+              <Input label="New Password" placeholder="Enter new password" value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+              <Input label="Confirm New Password" placeholder="Re-enter new password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+              <Text style={{ fontSize: FontSize.xs, color: Colors.textTertiary, marginTop: Spacing.xs }}>All other devices will be signed out after password change.</Text>
+              <Button title={changePassword.isPending ? "Updating..." : "Update Password"} onPress={handleChangePassword} disabled={changePassword.isPending} style={{ marginTop: Spacing.lg }} />
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Active Devices Modal */}
+      <Modal visible={showDevicesModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Active Devices</Text>
+              <TouchableOpacity onPress={() => setShowDevicesModal(false)}><Ionicons name="close" size={24} color={Colors.textSecondary} /></TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: Spacing.lg, maxHeight: 450 }} showsVerticalScrollIndicator={false}>
+              {sessionsLoading ? (
+                <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: Spacing.xxl }} />
+              ) : sessions && sessions.length > 0 ? (
+                <>
+                  {sessions.map((s: any) => (
+                    <View key={s._id} style={{ flexDirection: 'row', alignItems: 'center', padding: Spacing.md, borderRadius: BorderRadius.md, backgroundColor: s.isCurrent ? Colors.primaryGlow : Colors.background, borderWidth: 1, borderColor: s.isCurrent ? Colors.primary : Colors.border, marginBottom: Spacing.md }}>
+                      <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: s.isCurrent ? Colors.primary : Colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: s.isCurrent ? 0 : 1, borderColor: Colors.border }}>
+                        <Ionicons name={s.deviceName?.includes('Phone') || s.deviceName?.includes('iPhone') || s.deviceName?.includes('Android') ? 'phone-portrait' : s.deviceName?.includes('iPad') || s.deviceName?.includes('Tablet') ? 'tablet-portrait' : 'desktop'} size={22} color={s.isCurrent ? '#FFF' : Colors.textSecondary} />
+                      </View>
+                      <View style={{ flex: 1, marginLeft: Spacing.md }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                          <Text style={{ fontSize: FontSize.md, fontWeight: FontWeight.semiBold, color: Colors.textPrimary }}>{s.deviceName}</Text>
+                          {s.isCurrent && <View style={{ backgroundColor: Colors.primary, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}><Text style={{ fontSize: 10, color: '#FFF', fontWeight: FontWeight.bold }}>THIS DEVICE</Text></View>}
+                        </View>
+                        <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2 }}>{s.browser} • {s.os}</Text>
+                        <Text style={{ fontSize: FontSize.xs, color: Colors.textTertiary, marginTop: 2 }}>Last active: {new Date(s.lastActive).toLocaleString()}{s.ipAddress ? ` • IP: ${s.ipAddress}` : ''}</Text>
+                      </View>
+                      {!s.isCurrent && (
+                        <TouchableOpacity onPress={() => handleRevokeDevice(s._id)} style={{ padding: Spacing.sm }}>
+                          <Ionicons name="log-out-outline" size={22} color={Colors.error} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                  {sessions.filter((s: any) => !s.isCurrent).length > 0 && (
+                    <Button title={revokeAllSessions.isPending ? "Signing out..." : "Sign Out All Other Devices"} onPress={handleRevokeAll} variant="danger" fullWidth style={{ marginTop: Spacing.md, marginBottom: Spacing.md }} />
+                  )}
+                </>
+              ) : (
+                <Text style={{ fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', marginVertical: Spacing.xxl }}>No active sessions found.</Text>
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
