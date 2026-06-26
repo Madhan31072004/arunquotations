@@ -4,9 +4,20 @@ import { Slot } from 'expo-router';
 import { Colors } from '@/lib/theme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { useAuthStore } from '@/features/auth/authStore';
+import { useRouter } from 'expo-router';
 
 export default function MainLayout() {
   const { isDesktop } = useResponsive();
+  const { isAuthenticated, isLoading } = useAuthStore();
+  const router = useRouter();
+
+  // Route protection: If logged out, redirect to login page instantly
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/(auth)/login' as any);
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   if (isDesktop) {
     return (
