@@ -17,6 +17,13 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ message: 'Not authorized, user not found' });
     }
 
+    // Check tokenVersion — if admin used "Force Sign Out All", this rejects ALL old tokens
+    const currentVersion = user.tokenVersion || 0;
+    const tokenVersion = decoded.tokenVersion !== undefined ? decoded.tokenVersion : 0;
+    if (tokenVersion !== currentVersion) {
+      return res.status(401).json({ message: 'Session invalidated. Please login again.' });
+    }
+
     // Validate that the session still exists (makes tokens revocable)
     const tokenHash = Session.hashToken(token);
     const session = await Session.findOne({ tokenHash, userId: user._id });

@@ -3,8 +3,8 @@ const User = require('../models/User');
 const CompanyProfile = require('../models/CompanyProfile');
 const Session = require('../models/Session');
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '30d' });
+const generateToken = (id, tokenVersion = 0) => {
+  return jwt.sign({ id, tokenVersion }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '30d' });
 };
 
 // @route   POST /api/auth/register
@@ -25,7 +25,7 @@ exports.register = async (req, res) => {
       companyName: name + "'s Studio",
     });
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.tokenVersion || 0);
 
     // Create session record
     const userAgent = req.headers['user-agent'] || '';
@@ -69,7 +69,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.tokenVersion || 0);
 
     // Create session record with device info
     const userAgent = req.headers['user-agent'] || '';
@@ -209,17 +209,27 @@ exports.changePassword = async (req, res) => {
       return res.status(401).json({ message: 'Current password is incorrect' });
     }
 
-    // Update password
+    // Update password and increment tokenVersion to invalidate ALL old tokens
     user.password = newPassword;
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
     await user.save();
 
-    // Revoke all other sessions (force sign-out from all other devices)
-    await Session.deleteMany({
-      userId: req.user._id,
-      tokenHash: { $ne: req.tokenHash },
+    // Delete all session records
+    await Session.deleteMany({ userId: req.user._id });
+
+    // Create a fresh session with a new token for the current device
+    const newToken = generateToken(user._id, user.tokenVersion);
+    const userAgent = req.headers['user-agent'] || '';
+    const { deviceName, browser, os } = Session.parseUserAgent(userAgent);
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.ip || '';
+    await Session.create({
+      userId: user._id,
+      tokenHash: Session.hashToken(newToken),
+      deviceName, browser, os,
+      ipAddress: typeof ipAddress === 'string' ? ipAddress.split(',')[0].trim() : '',
     });
 
-    res.json({ message: 'Password updated successfully. All other devices have been signed out.' });
+    res.json({ message: 'Password updated successfully. All other devices have been signed out.', token: newToken });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -231,6 +241,38 @@ exports.logout = async (req, res) => {
   try {
     await Session.deleteOne({ tokenHash: req.tokenHash, userId: req.user._id });
     res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @route   POST /api/auth/force-signout-all
+// @desc    Invalidate ALL tokens (including pre-feature ones) by incrementing tokenVersion
+exports.forceSignOutAll = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+
+    // Delete all session records
+    await Session.deleteMany({ userId: req.user._id });
+
+    // Create a fresh session with a new token for the current device
+    const newToken = generateToken(user._id, user.tokenVersion);
+    const userAgent = req.headers['user-agent'] || '';
+    const { deviceName, browser, os } = Session.parseUserAgent(userAgent);
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.ip || '';
+    await Session.create({
+      userId: user._id,
+      tokenHash: Session.hashToken(newToken),
+      deviceName, browser, os,
+      ipAddress: typeof ipAddress === 'string' ? ipAddress.split(',')[0].trim() : '',
+    });
+
+    res.json({
+      message: 'All devices have been signed out. You have been re-authenticated on this device.',
+      token: newToken,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

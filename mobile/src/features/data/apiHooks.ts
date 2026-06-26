@@ -276,6 +276,20 @@ export const useServerLogout = () => {
   });
 };
 
+// --- Force Sign Out All Devices (including pre-feature tokens) ---
+export const useForceSignOutAll = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post('/auth/force-signout-all');
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    },
+  });
+};
+
 // --- Notifications ---
 export const useNotifications = () => {
   return useQuery({

@@ -9,7 +9,7 @@ import { Header } from '@/components/layout/Header';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/authStore';
-import { useCompanyProfile, useUpdateCompanyProfile, useUpdateUser, useExportData, useSessions, useRevokeSession, useRevokeAllSessions, useChangePassword, useServerLogout } from '@/features/data/apiHooks';
+import { useCompanyProfile, useUpdateCompanyProfile, useUpdateUser, useExportData, useSessions, useRevokeSession, useRevokeAllSessions, useChangePassword, useServerLogout, useForceSignOutAll } from '@/features/data/apiHooks';
 import { APP_NAME, APP_VERSION } from '@/lib/constants';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -45,7 +45,7 @@ const settingsSections = [
 export default function SettingsScreen() {
   const router = useRouter();
   const { isMobile, isDesktop, contentPadding } = useResponsive();
-  const { logout, user } = useAuthStore();
+  const { logout, user, setAuth } = useAuthStore();
   const { data: company, isLoading } = useCompanyProfile();
   const updateCompany = useUpdateCompanyProfile();
   const updateUser = useUpdateUser();
@@ -55,6 +55,7 @@ export default function SettingsScreen() {
   const revokeAllSessions = useRevokeAllSessions();
   const changePassword = useChangePassword();
   const serverLogout = useServerLogout();
+  const forceSignOutAll = useForceSignOutAll();
 
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showBrandingModal, setShowBrandingModal] = useState(false);
@@ -166,7 +167,11 @@ export default function SettingsScreen() {
       return;
     }
     try {
-      await changePassword.mutateAsync({ currentPassword: curPassword, newPassword });
+      const result = await changePassword.mutateAsync({ currentPassword: curPassword, newPassword });
+      // Save the new token (old one is now invalid due to tokenVersion bump)
+      if (result.token && user) {
+        setAuth(user, result.token);
+      }
       setCurPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -192,6 +197,19 @@ export default function SettingsScreen() {
       Alert.alert('Done', result.message);
     } catch (e) {
       Alert.alert('Error', 'Failed to sign out devices');
+    }
+  };
+
+  const handleForceSignOutAll = async () => {
+    try {
+      const result = await forceSignOutAll.mutateAsync();
+      // Save the new token (old one is now invalid)
+      if (result.token && user) {
+        setAuth(user, result.token);
+      }
+      Alert.alert('Done', result.message);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to sign out all devices');
     }
   };
 
@@ -473,6 +491,7 @@ export default function SettingsScreen() {
                   {sessions.filter((s: any) => !s.isCurrent).length > 0 && (
                     <Button title={revokeAllSessions.isPending ? "Signing out..." : "Sign Out All Other Devices"} onPress={handleRevokeAll} variant="danger" fullWidth style={{ marginTop: Spacing.md, marginBottom: Spacing.md }} />
                   )}
+                  <Button title={forceSignOutAll.isPending ? "Forcing Sign Out..." : "Force Sign Out All Devices"} onPress={handleForceSignOutAll} variant="danger" fullWidth style={{ marginTop: Spacing.md, marginBottom: Spacing.md }} />
                 </>
               ) : (
                 <Text style={{ fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', marginVertical: Spacing.xxl }}>No active sessions found.</Text>

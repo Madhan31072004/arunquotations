@@ -10,6 +10,7 @@ const {
   revokeAllSessions,
   changePassword,
   logout,
+  forceSignOutAll,
 } = require('../controllers/authController');
 const auth = require('../middleware/auth');
 
@@ -28,5 +29,8 @@ router.put('/change-password', auth, changePassword);
 
 // Logout (server-side session revocation)
 router.post('/logout', auth, logout);
+
+// Force sign out ALL devices (invalidates all tokens including old ones)
+router.post('/force-signout-all', auth, forceSignOutAll);
 
 module.exports = router;
