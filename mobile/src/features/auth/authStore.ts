@@ -28,6 +28,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
 
   setAuth: async (user: User, token: string) => {
+    // Update state synchronously first so API calls immediately use the new token
+    set({ user, token, isAuthenticated: true, isLoading: false });
+    
+    // Save to storage asynchronously
     try {
       await AsyncStorage.setItem('auth_token', token);
       await AsyncStorage.setItem('auth_user', JSON.stringify(user));
@@ -38,7 +42,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         localStorage.setItem('auth_user', JSON.stringify(user));
       } catch {}
     }
-    set({ user, token, isAuthenticated: true, isLoading: false });
   },
 
   logout: async () => {
