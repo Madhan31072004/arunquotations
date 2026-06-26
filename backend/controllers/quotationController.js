@@ -1,5 +1,7 @@
 const Quotation = require('../models/Quotation');
 const CompanyProfile = require('../models/CompanyProfile');
+const { logActivity } = require('./auditController');
+const { getAccessibleUserIds } = require('../utils/accessControl');
 
 // Generate unique quotation number starting from 1 (001)
 const generateQuotationNumber = async (userId) => {
@@ -48,7 +50,19 @@ const generateQuotationNumber = async (userId) => {
 // @route   GET /api/quotations
 exports.getQuotations = async (req, res) => {
   try {
-    const filter = { userId: req.user._id };
+    const accessibleUserIds = await getAccessibleUserIds(req.user);
+
+    // Auto-expire quotations that have passed their validUntil date
+    await Quotation.updateMany(
+      {
+        userId: { $in: accessibleUserIds },
+        validUntil: { $lt: new Date() },
+        status: { $in: ['pending', 'sent'] },
+      },
+      { $set: { status: 'expired' } }
+    );
+
+    const filter = { userId: { $in: accessibleUserIds } };
     if (req.query.status) filter.status = req.query.status;
 
     const quotations = await Quotation.find(filter)
@@ -72,6 +86,7 @@ exports.createQuotation = async (req, res) => {
       quotationNumber,
     });
     res.status(201).json(quotation);
+    logActivity(req.user._id, 'create_quotation', 'quotation', quotation._id, `Created quotation ${quotationNumber}`, req);
   } catch (error) {
     console.error('BACKEND CREATE QUOTATION ERROR:', error);
     res.status(500).json({ message: error.message });
@@ -81,7 +96,8 @@ exports.createQuotation = async (req, res) => {
 // @route   GET /api/quotations/:id
 exports.getQuotation = async (req, res) => {
   try {
-    const quotation = await Quotation.findOne({ _id: req.params.id, userId: req.user._id })
+    const accessibleUserIds = await getAccessibleUserIds(req.user);
+    const quotation = await Quotation.findOne({ _id: req.params.id, userId: { $in: accessibleUserIds } })
       .populate('clientId')
       .populate('areas.items.materialId', 'name category unit unitPrice');
 
@@ -95,7 +111,8 @@ exports.getQuotation = async (req, res) => {
 // @route   PUT /api/quotations/:id
 exports.updateQuotation = async (req, res) => {
   try {
-    const quotation = await Quotation.findOne({ _id: req.params.id, userId: req.user._id });
+    const accessibleUserIds = await getAccessibleUserIds(req.user);
+    const quotation = await Quotation.findOne({ _id: req.params.id, userId: { $in: accessibleUserIds } });
     if (!quotation) return res.status(404).json({ message: 'Quotation not found' });
 
     Object.assign(quotation, req.body);
@@ -103,6 +120,7 @@ exports.updateQuotation = async (req, res) => {
 
     const populated = await quotation.populate('clientId', 'name phone projectName');
     res.json(populated);
+    logActivity(req.user._id, 'update_quotation', 'quotation', quotation._id, `Updated quotation ${quotation.quotationNumber}`, req);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -111,8 +129,10 @@ exports.updateQuotation = async (req, res) => {
 // @route   DELETE /api/quotations/:id
 exports.deleteQuotation = async (req, res) => {
   try {
-    const quotation = await Quotation.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+    const accessibleUserIds = await getAccessibleUserIds(req.user);
+    const quotation = await Quotation.findOneAndDelete({ _id: req.params.id, userId: { $in: accessibleUserIds } });
     if (!quotation) return res.status(404).json({ message: 'Quotation not found' });
+    logActivity(req.user._id, 'delete_quotation', 'quotation', quotation._id, `Deleted quotation ${quotation.quotationNumber}`, req);
     res.json({ message: 'Quotation deleted' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -123,8 +143,9 @@ exports.deleteQuotation = async (req, res) => {
 exports.updateStatus = async (req, res) => {
   try {
     const { status } = req.body;
+    const accessibleUserIds = await getAccessibleUserIds(req.user);
     const quotation = await Quotation.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id },
+      { _id: req.params.id, userId: { $in: accessibleUserIds } },
       { status },
       { new: true }
     );

@@ -29,6 +29,7 @@ const statusColors: Record<string, string> = {
   approved: Colors.statusApproved,
   rejected: Colors.statusRejected,
   revised: Colors.statusRevised,
+  expired: '#9CA3AF',
 };
 
 export default function QuotationsScreen() {
@@ -45,7 +46,7 @@ export default function QuotationsScreen() {
 
   const { data: quotations, isLoading } = useQuotations();
 
-  const filters = ['all', 'draft', 'sent', 'approved', 'rejected', 'revised'];
+  const filters = ['all', 'draft', 'sent', 'approved', 'rejected', 'revised', 'expired'];
 
   const quotationList = quotations || [];
   const filtered = quotationList.filter((q: any) => {
@@ -170,6 +171,12 @@ export default function QuotationsScreen() {
             <Ionicons name="calendar-outline" size={14} color={Colors.textTertiary} />
             <Text style={styles.metaText}>{new Date(q.createdAt).toLocaleDateString()}</Text>
           </View>
+          {q.viewCount > 0 && (
+            <View style={styles.cardMeta}>
+              <Ionicons name="eye-outline" size={14} color={Colors.primary} />
+              <Text style={[styles.metaText, { color: Colors.primary }]}>{q.viewCount}</Text>
+            </View>
+          )}
           <Text style={styles.amount}>{formatAmount(q.grandTotal)}</Text>
         </View>
       </Card>

@@ -88,6 +88,7 @@ export const QUOTATION_STATUSES = {
   approved: { label: 'Approved', color: '#10B981' },
   rejected: { label: 'Rejected', color: '#EF4444' },
   revised: { label: 'Revised', color: '#F59E0B' },
+  expired: { label: 'Expired', color: '#9CA3AF' },
 } as const;
 
 // Currency

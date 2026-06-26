@@ -365,3 +365,64 @@ export const useAcceptPublicQuotation = () => {
     },
   });
 };
+
+// --- Audit Logs ---
+export const useAuditLogs = (page = 1, limit = 50) => {
+  return useQuery({
+    queryKey: ['auditLogs', page, limit],
+    queryFn: async () => {
+      const { data } = await api.get(`/audit?page=${page}&limit=${limit}`);
+      return data;
+    },
+  });
+};
+
+// --- Team ---
+export const useTeam = () => {
+  return useQuery({
+    queryKey: ['team'],
+    queryFn: async () => {
+      const { data } = await api.get('/team');
+      return data;
+    },
+  });
+};
+
+export const useAddTeamMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (memberData: any) => {
+      const { data } = await api.post('/team', memberData);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team'] });
+    },
+  });
+};
+
+export const useToggleTeamMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, isActive }: { id: string, isActive: boolean }) => {
+      const { data } = await api.patch(`/team/${id}/status`, { isActive });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team'] });
+    },
+  });
+};
+
+export const useDeleteTeamMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete(`/team/${id}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team'] });
+    },
+  });
+};

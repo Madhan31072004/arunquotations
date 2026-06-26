@@ -9,39 +9,54 @@ import { Header } from '@/components/layout/Header';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/authStore';
-import { useCompanyProfile, useUpdateCompanyProfile, useUpdateUser, useExportData, useSessions, useRevokeSession, useRevokeAllSessions, useChangePassword, useServerLogout, useForceSignOutAll } from '@/features/data/apiHooks';
+import { useCompanyProfile, useUpdateCompanyProfile, useUpdateUser, useExportData, useSessions, useRevokeSession, useRevokeAllSessions, useChangePassword, useServerLogout, useForceSignOutAll, useAuditLogs, useTeam, useAddTeamMember, useToggleTeamMember, useDeleteTeamMember } from '@/features/data/apiHooks';
 import { APP_NAME, APP_VERSION } from '@/lib/constants';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useQueryClient } from '@tanstack/react-query';
 
-const settingsSections = [
-  {
-    title: 'Company Profile',
-    items: [
-      { icon: 'business-outline' as const, label: 'Company Details', sub: 'Name, address, GST number' },
-      { icon: 'image-outline' as const, label: 'Logo & Branding', sub: 'Upload logo, set brand colors' },
-      { icon: 'document-attach-outline' as const, label: 'Terms & Conditions', sub: 'Default T&C for quotations' },
-    ],
-  },
-  {
-    title: 'Preferences',
-    items: [
-      { icon: 'calculator-outline' as const, label: 'Tax Settings', sub: 'GST rates and defaults' },
-      { icon: 'text-outline' as const, label: 'Quotation Format', sub: 'Number prefix, templates' },
-      { icon: 'color-palette-outline' as const, label: 'PDF Theme', sub: 'Colors, fonts, layout' },
-    ],
-  },
-  {
+const getSettingsSections = (role: string) => {
+  const sections = [];
+
+  if (role === 'admin') {
+    sections.push({
+      title: 'Company Profile',
+      items: [
+        { icon: 'business-outline' as const, label: 'Company Details', sub: 'Name, address, GST number' },
+        { icon: 'image-outline' as const, label: 'Logo & Branding', sub: 'Upload logo, set brand colors' },
+        { icon: 'document-attach-outline' as const, label: 'Terms & Conditions', sub: 'Default T&C for quotations' },
+      ],
+    });
+    sections.push({
+      title: 'Preferences',
+      items: [
+        { icon: 'calculator-outline' as const, label: 'Tax Settings', sub: 'GST rates and defaults' },
+        { icon: 'text-outline' as const, label: 'Quotation Format', sub: 'Number prefix, templates' },
+        { icon: 'color-palette-outline' as const, label: 'PDF Theme', sub: 'Colors, fonts, layout' },
+      ],
+    });
+    sections.push({
+      title: 'Team',
+      items: [
+        { icon: 'people-outline' as const, label: 'Team Members', sub: 'Manage your design team' },
+      ],
+    });
+  }
+
+  sections.push({
     title: 'Account',
     items: [
       { icon: 'person-outline' as const, label: 'Profile', sub: 'Name, email, phone' },
+      { icon: 'shield-checkmark-outline' as const, label: 'Two-Factor Auth', sub: 'Extra security for your account' },
       { icon: 'key-outline' as const, label: 'Change Password', sub: 'Update your login password' },
       { icon: 'phone-portrait-outline' as const, label: 'Active Devices', sub: 'Manage logged-in sessions' },
-      { icon: 'cloud-upload-outline' as const, label: 'Backup & Export', sub: 'Export data, backup' },
+      { icon: 'list-outline' as const, label: 'Activity Log', sub: 'View recent account activity' },
+      ...(role === 'admin' ? [{ icon: 'cloud-upload-outline' as const, label: 'Backup & Export', sub: 'Export data, backup' }] : []),
     ],
-  },
-];
+  });
+
+  return sections;
+};
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -59,6 +74,15 @@ export default function SettingsScreen() {
   const forceSignOutAll = useForceSignOutAll();
   const queryClient = useQueryClient();
 
+  const [auditPage, setAuditPage] = useState(1);
+  const { data: auditData, isLoading: auditLoading } = useAuditLogs(auditPage, 20);
+
+  // Team hooks
+  const { data: teamMembers, isLoading: teamLoading } = useTeam();
+  const addTeamMember = useAddTeamMember();
+  const toggleTeamMember = useToggleTeamMember();
+  const deleteTeamMember = useDeleteTeamMember();
+
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showBrandingModal, setShowBrandingModal] = useState(false);
   const [showTcModal, setShowTcModal] = useState(false);
@@ -68,6 +92,14 @@ export default function SettingsScreen() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDevicesModal, setShowDevicesModal] = useState(false);
+  const [showActivityModal, setShowActivityModal] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  
+  const [teamName, setTeamName] = useState('');
+  const [teamEmail, setTeamEmail] = useState('');
+  const [teamPhone, setTeamPhone] = useState('');
+  const [teamPassword, setTeamPassword] = useState('');
 
   const [curPassword, setCurPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -265,6 +297,9 @@ export default function SettingsScreen() {
     if (item.label === 'Profile') return setShowProfileModal(true);
     if (item.label === 'Change Password') return setShowPasswordModal(true);
     if (item.label === 'Active Devices') { refetchSessions(); return setShowDevicesModal(true); }
+    if (item.label === 'Activity Log') return setShowActivityModal(true);
+    if (item.label === 'Team Members') return setShowTeamModal(true);
+    if (item.label === 'Two-Factor Auth') return setShow2FAModal(true);
     if (item.label === 'Backup & Export') return handleExport();
     
     if (Platform.OS === 'web') {
@@ -284,7 +319,7 @@ export default function SettingsScreen() {
           </View>
         )}
 
-        {settingsSections.map((section, si) => (
+        {getSettingsSections(user?.role || 'designer').map((section, si) => (
           <View key={si} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
             <Card variant="default" padding="none">
@@ -505,6 +540,192 @@ export default function SettingsScreen() {
                 <Text style={{ fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', marginVertical: Spacing.xxl }}>No active sessions found.</Text>
               )}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Activity Log Modal */}
+      <Modal visible={showActivityModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%', width: isMobile ? '90%' : 500 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Activity Log</Text>
+              <TouchableOpacity onPress={() => setShowActivityModal(false)}><Ionicons name="close" size={24} color={Colors.textSecondary} /></TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: Spacing.lg, maxHeight: 450 }} showsVerticalScrollIndicator={false}>
+              {auditLoading ? (
+                <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: Spacing.xxl }} />
+              ) : auditData?.logs && auditData.logs.length > 0 ? (
+                <>
+                  {auditData.logs.map((log: any) => (
+                    <View key={log._id} style={{ flexDirection: 'row', paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
+                      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surfaceElevated, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md }}>
+                        <Ionicons 
+                          name={
+                            log.action.includes('login') || log.action.includes('logout') ? 'log-in-outline' :
+                            log.action.includes('quotation') ? 'document-text-outline' :
+                            log.action.includes('client') ? 'people-outline' :
+                            log.action.includes('password') || log.action.includes('signout') ? 'shield-checkmark-outline' :
+                            'list-outline'
+                          } 
+                          size={20} 
+                          color={Colors.primary} 
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: FontSize.sm, color: Colors.textPrimary, fontWeight: FontWeight.medium }}>{log.details || log.action}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, flexWrap: 'wrap', gap: 6 }}>
+                          <Text style={{ fontSize: FontSize.xs, color: Colors.textTertiary }}>{new Date(log.createdAt).toLocaleString()}</Text>
+                          {log.deviceName ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surfaceHover, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                              <Ionicons name="hardware-chip-outline" size={10} color={Colors.textSecondary} style={{ marginRight: 4 }} />
+                              <Text style={{ fontSize: 10, color: Colors.textSecondary }}>{log.deviceName}</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                  {auditData.pages > 1 && (
+                    <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: Spacing.md, gap: Spacing.sm }}>
+                      <Button title="Prev" size="sm" variant="outline" onPress={() => setAuditPage(Math.max(1, auditPage - 1))} disabled={auditPage === 1} />
+                      <Text style={{ alignSelf: 'center', fontSize: FontSize.sm, color: Colors.textSecondary }}>{auditPage} / {auditData.pages}</Text>
+                      <Button title="Next" size="sm" variant="outline" onPress={() => setAuditPage(Math.min(auditData.pages, auditPage + 1))} disabled={auditPage === auditData.pages} />
+                    </View>
+                  )}
+                </>
+              ) : (
+                <Text style={{ fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', marginVertical: Spacing.xxl }}>No recent activity found.</Text>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Team Modal */}
+      <Modal visible={showTeamModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%', width: isMobile ? '90%' : 600 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Team Members</Text>
+              <TouchableOpacity onPress={() => setShowTeamModal(false)}><Ionicons name="close" size={24} color={Colors.textSecondary} /></TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: Spacing.lg, maxHeight: 600 }} showsVerticalScrollIndicator={false}>
+              
+              <View style={{ marginBottom: Spacing.xl, padding: Spacing.md, backgroundColor: Colors.surfaceElevated, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border }}>
+                <Text style={{ fontSize: FontSize.md, fontWeight: FontWeight.semiBold, color: Colors.textPrimary, marginBottom: Spacing.md }}>Add Designer</Text>
+                <View style={{ flexDirection: isMobile ? 'column' : 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
+                  <View style={{ flex: 1 }}><Input label="Name" placeholder="Designer Name" value={teamName} onChangeText={setTeamName} /></View>
+                  <View style={{ flex: 1 }}><Input label="Email" placeholder="designer@example.com" value={teamEmail} onChangeText={setTeamEmail} keyboardType="email-address" /></View>
+                </View>
+                <View style={{ flexDirection: isMobile ? 'column' : 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
+                  <View style={{ flex: 1 }}><Input label="Phone" placeholder="1234567890" value={teamPhone} onChangeText={setTeamPhone} keyboardType="phone-pad" /></View>
+                  <View style={{ flex: 1 }}><Input label="Temporary Password" placeholder="Password (min 6 chars)" value={teamPassword} onChangeText={setTeamPassword} secureTextEntry /></View>
+                </View>
+                <Button 
+                  title={addTeamMember.isPending ? "Adding..." : "Add Designer"} 
+                  onPress={async () => {
+                    if (!teamName || !teamEmail || teamPassword.length < 6) return Alert.alert('Error', 'Please fill all required fields and ensure password is at least 6 characters.');
+                    try {
+                      await addTeamMember.mutateAsync({ name: teamName, email: teamEmail, phone: teamPhone, password: teamPassword });
+                      setTeamName(''); setTeamEmail(''); setTeamPhone(''); setTeamPassword('');
+                      Alert.alert('Success', 'Designer added successfully');
+                    } catch(e: any) {
+                      Alert.alert('Error', e.response?.data?.message || 'Failed to add designer');
+                    }
+                  }} 
+                  disabled={addTeamMember.isPending}
+                />
+              </View>
+
+              <Text style={{ fontSize: FontSize.md, fontWeight: FontWeight.semiBold, color: Colors.textPrimary, marginBottom: Spacing.md }}>Active Team</Text>
+              {teamLoading ? (
+                <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: Spacing.xxl }} />
+              ) : teamMembers && teamMembers.length > 0 ? (
+                teamMembers.map((member: any) => (
+                  <View key={member._id} style={{ flexDirection: 'row', alignItems: 'center', padding: Spacing.md, borderRadius: BorderRadius.md, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.md }}>
+                    <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.surfaceHover, alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="person" size={20} color={Colors.textSecondary} />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: Spacing.md }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                        <Text style={{ fontSize: FontSize.md, fontWeight: FontWeight.semiBold, color: Colors.textPrimary }}>{member.name}</Text>
+                        {!member.isActive && <View style={{ backgroundColor: Colors.errorBg, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}><Text style={{ fontSize: 10, color: Colors.error, fontWeight: FontWeight.bold }}>INACTIVE</Text></View>}
+                      </View>
+                      <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2 }}>{member.email}</Text>
+                      <Text style={{ fontSize: FontSize.xs, color: Colors.textTertiary, marginTop: 2 }}>{member.role.toUpperCase()}</Text>
+                    </View>
+                    
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                      <TouchableOpacity 
+                        onPress={async () => {
+                          try {
+                            await toggleTeamMember.mutateAsync({ id: member._id, isActive: !member.isActive });
+                          } catch (e) { Alert.alert('Error', 'Failed to update status'); }
+                        }} 
+                        style={{ padding: Spacing.sm, backgroundColor: member.isActive ? Colors.warningBg : Colors.successBg, borderRadius: BorderRadius.md }}
+                      >
+                        <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: member.isActive ? Colors.warning : Colors.success }}>{member.isActive ? 'DEACTIVATE' : 'ACTIVATE'}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          Alert.alert('Delete', `Are you sure you want to delete ${member.name}?`, [
+                            { text: 'Cancel', style: 'cancel' },
+                            { text: 'Delete', style: 'destructive', onPress: async () => {
+                              try { await deleteTeamMember.mutateAsync(member._id); } catch(e) { Alert.alert('Error', 'Failed to delete user'); }
+                            }}
+                          ])
+                        }} 
+                        style={{ padding: Spacing.sm }}
+                      >
+                        <Ionicons name="trash-outline" size={20} color={Colors.error} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={{ fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', marginVertical: Spacing.xxl }}>No team members found.</Text>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Two-Factor Auth Modal */}
+      <Modal visible={show2FAModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%', width: isMobile ? '90%' : 500 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Two-Factor Authentication</Text>
+              <TouchableOpacity onPress={() => setShow2FAModal(false)}><Ionicons name="close" size={24} color={Colors.textSecondary} /></TouchableOpacity>
+            </View>
+            <View style={{ padding: Spacing.lg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg, padding: Spacing.md, backgroundColor: user?.twoFactorEnabled ? Colors.successBg : Colors.warningBg, borderRadius: BorderRadius.md }}>
+                <Ionicons name={user?.twoFactorEnabled ? "shield-checkmark" : "shield-half"} size={28} color={user?.twoFactorEnabled ? Colors.success : Colors.warning} style={{ marginRight: Spacing.md }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: FontSize.md, fontWeight: FontWeight.semiBold, color: Colors.textPrimary }}>
+                    {user?.twoFactorEnabled ? '2FA is Enabled' : '2FA is Disabled'}
+                  </Text>
+                  <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 4 }}>
+                    {user?.twoFactorEnabled ? 'Your account has an extra layer of security. Every time you log in, we will send an OTP to your email.' : 'Protect your account from unauthorized access by requiring an OTP when logging in.'}
+                  </Text>
+                </View>
+              </View>
+
+              <Button
+                title={user?.twoFactorEnabled ? (updateUser.isPending ? "Disabling..." : "Disable 2FA") : (updateUser.isPending ? "Enabling..." : "Enable 2FA")}
+                variant={user?.twoFactorEnabled ? "outline" : "primary"}
+                onPress={async () => {
+                  try {
+                    await updateUser.mutateAsync({ twoFactorEnabled: !user?.twoFactorEnabled });
+                    Alert.alert('Success', `Two-Factor Authentication has been ${!user?.twoFactorEnabled ? 'enabled' : 'disabled'}.`);
+                  } catch (e) {
+                    Alert.alert('Error', 'Failed to update 2FA status');
+                  }
+                }}
+                disabled={updateUser.isPending}
+              />
+            </View>
           </View>
         </View>
       </Modal>

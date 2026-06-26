@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { exportUserData } = require('../controllers/exportController');
+const { getAuditLogs } = require('../controllers/auditController');
 const { auth } = require('../middleware/auth');
 
-router.use(auth);
-router.route('/').get(exportUserData);
+router.get('/', auth, getAuditLogs);
 
 module.exports = router;

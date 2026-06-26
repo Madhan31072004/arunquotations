@@ -51,4 +51,12 @@ const auth = async (req, res, next) => {
   }
 };
 
-module.exports = auth;
+const adminOnly = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Forbidden. Admin access required.' });
+  }
+};
+
+module.exports = { auth, adminOnly };

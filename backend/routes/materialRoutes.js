@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getMaterials, createMaterial, getMaterial, updateMaterial, deleteMaterial } = require('../controllers/materialController');
-const auth = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 
 router.use(auth);
 router.route('/').get(getMaterials).post(createMaterial);

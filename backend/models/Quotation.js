@@ -31,10 +31,21 @@ const quotationSchema = new mongoose.Schema({
   title: { type: String, default: 'Untitled Quotation' },
   status: {
     type: String,
-    enum: ['draft', 'sent', 'pending', 'approved', 'rejected', 'revised'],
+    enum: ['draft', 'sent', 'pending', 'approved', 'rejected', 'revised', 'expired'],
     default: 'draft',
   },
   validUntil: { type: Date },
+  expiryNotified: { type: Boolean, default: false },
+
+  // Client view tracking
+  viewCount: { type: Number, default: 0 },
+  lastViewedAt: { type: Date },
+  viewHistory: [{
+    viewedAt: { type: Date, default: Date.now },
+    ipAddress: { type: String, default: '' },
+    userAgent: { type: String, default: '' },
+    _id: false,
+  }],
 
   areas: [areaSchema],
 

@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const CompanyProfile = require('../models/CompanyProfile');
 const Session = require('../models/Session');
+const { logActivity } = require('./auditController');
 
 const generateToken = (id, tokenVersion = 0) => {
   return jwt.sign({ id, tokenVersion }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '30d' });
@@ -64,9 +65,26 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
+    if (!user.isActive) {
+      return res.status(403).json({ message: 'Account is deactivated' });
+    }
+
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    if (user.twoFactorEnabled) {
+      // Generate 6 digit OTP
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      user.otpCode = otpCode;
+      user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+      await user.save();
+
+      // In a real app, send the OTP via Email or SMS here
+      console.log(`[DEV MODE] OTP for ${user.email} is: ${otpCode}`);
+
+      return res.json({ requires2FA: true, userId: user._id, message: 'OTP sent to your email' });
     }
 
     const token = generateToken(user._id, user.tokenVersion || 0);
@@ -86,9 +104,58 @@ exports.login = async (req, res) => {
     });
 
     res.json({
-      user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role },
+      user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role, twoFactorEnabled: user.twoFactorEnabled },
       token,
     });
+
+    // Audit log (fire-and-forget)
+    logActivity(user._id, 'login', 'user', user._id, `Logged in as ${user.email}`, req);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @route   POST /api/auth/verify-2fa
+exports.verify2FA = async (req, res) => {
+  try {
+    const { userId, otp } = req.body;
+
+    const user = await User.findById(userId).select('+otpCode +otpExpires');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.otpCode || user.otpCode !== otp || user.otpExpires < new Date()) {
+      return res.status(401).json({ message: 'Invalid or expired OTP' });
+    }
+
+    // Clear OTP
+    user.otpCode = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    const token = generateToken(user._id, user.tokenVersion || 0);
+
+    // Create session
+    const userAgent = req.headers['user-agent'] || '';
+    const { deviceName, browser, os } = Session.parseUserAgent(userAgent);
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.ip || '';
+
+    await Session.create({
+      userId: user._id,
+      tokenHash: Session.hashToken(token),
+      deviceName,
+      browser,
+      os,
+      ipAddress: typeof ipAddress === 'string' ? ipAddress.split(',')[0].trim() : '',
+    });
+
+    res.json({
+      user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role, twoFactorEnabled: user.twoFactorEnabled },
+      token,
+    });
+
+    logActivity(user._id, 'login', 'user', user._id, `Logged in with 2FA as ${user.email}`, req);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -97,25 +164,26 @@ exports.login = async (req, res) => {
 // @route   GET /api/auth/me
 exports.getMe = async (req, res) => {
   res.json({
-    user: { _id: req.user._id, name: req.user.name, email: req.user.email, phone: req.user.phone, role: req.user.role },
+    user: { _id: req.user._id, name: req.user.name, email: req.user.email, phone: req.user.phone, role: req.user.role, twoFactorEnabled: req.user.twoFactorEnabled },
   });
 };
 
 // @route   PUT /api/auth/me
 exports.updateMe = async (req, res) => {
   try {
-    const { name, email, phone, password } = req.body;
+    const { name, email, phone, password, twoFactorEnabled } = req.body;
     const user = await User.findById(req.user._id).select('+password');
 
     if (name) user.name = name;
     if (email) user.email = email;
     if (phone) user.phone = phone;
     if (password) user.password = password;
+    if (twoFactorEnabled !== undefined) user.twoFactorEnabled = twoFactorEnabled;
 
     await user.save();
 
     res.json({
-      user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role },
+      user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role, twoFactorEnabled: user.twoFactorEnabled },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -230,6 +298,7 @@ exports.changePassword = async (req, res) => {
     });
 
     res.json({ message: 'Password updated successfully. All other devices have been signed out.', token: newToken });
+    logActivity(req.user._id, 'change_password', 'user', req.user._id, 'Changed password and signed out all other devices', req);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -240,6 +309,7 @@ exports.changePassword = async (req, res) => {
 exports.logout = async (req, res) => {
   try {
     await Session.deleteOne({ tokenHash: req.tokenHash, userId: req.user._id });
+    logActivity(req.user._id, 'logout', 'user', req.user._id, 'Logged out', req);
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -30,6 +30,10 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  const [step, setStep] = useState<'login' | 'otp'>('login');
+  const [otp, setOtp] = useState('');
+  const [pendingUserId, setPendingUserId] = useState('');
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -40,10 +44,34 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const res = await api.post('/auth/login', { email: email.trim(), password });
+      
+      if (res.data.requires2FA) {
+        setPendingUserId(res.data.userId);
+        setStep('otp');
+      } else {
+        setAuth(res.data.user, res.data.token);
+        router.replace('/(main)/(tabs)/dashboard');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp.trim() || otp.length < 6) {
+      setError('Please enter a valid 6-digit OTP');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/verify-2fa', { userId: pendingUserId, otp: otp.trim() });
       setAuth(res.data.user, res.data.token);
       router.replace('/(main)/(tabs)/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -74,49 +102,80 @@ export default function LoginScreen() {
         </View>
       ) : null}
 
-      {/* Form */}
-      <Input
-        label="Email Address"
-        placeholder="designer@example.com"
-        icon="mail-outline"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoComplete="email"
-        required
-      />
+      {step === 'login' ? (
+        <>
+          <Input
+            label="Email Address"
+            placeholder="designer@example.com"
+            icon="mail-outline"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            required
+          />
 
-      <Input
-        label="Password"
-        placeholder="Enter your password"
-        icon="lock-closed-outline"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        required
-      />
+          <Input
+            label="Password"
+            placeholder="Enter your password"
+            icon="lock-closed-outline"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            required
+          />
 
-      <TouchableOpacity style={styles.forgotButton}>
-        <Text style={styles.forgotText}>Forgot password?</Text>
-      </TouchableOpacity>
+          <TouchableOpacity style={styles.forgotButton}>
+            <Text style={styles.forgotText}>Forgot password?</Text>
+          </TouchableOpacity>
 
-      <Button
-        title="Sign In"
-        onPress={handleLogin}
-        loading={loading}
-        fullWidth
-        size="lg"
-        style={{ marginTop: Spacing.lg }}
-      />
+          <Button
+            title="Sign In"
+            onPress={handleLogin}
+            loading={loading}
+            fullWidth
+            size="lg"
+            style={{ marginTop: Spacing.lg }}
+          />
 
-      {/* Register link */}
-      <View style={styles.registerSection}>
-        <Text style={styles.registerText}>Don't have an account? </Text>
-        <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-          <Text style={styles.registerLink}>Create Account</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Register link */}
+          <View style={styles.registerSection}>
+            <Text style={styles.registerText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+              <Text style={styles.registerLink}>Create Account</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : (
+        <>
+          <Text style={{ fontSize: FontSize.md, color: Colors.textSecondary, marginBottom: Spacing.lg }}>
+            For your security, we've sent a 6-digit one-time password to your email.
+          </Text>
+          <Input
+            label="Security Code"
+            placeholder="123456"
+            icon="key-outline"
+            value={otp}
+            onChangeText={setOtp}
+            keyboardType="number-pad"
+            required
+          />
+
+          <Button
+            title="Verify & Sign In"
+            onPress={handleVerifyOtp}
+            loading={loading}
+            fullWidth
+            size="lg"
+            style={{ marginTop: Spacing.lg }}
+          />
+          
+          <TouchableOpacity style={{ marginTop: Spacing.lg, alignSelf: 'center' }} onPress={() => setStep('login')}>
+            <Text style={{ color: Colors.primary, fontWeight: FontWeight.medium }}>Back to Login</Text>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 

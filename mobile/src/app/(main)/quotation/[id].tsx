@@ -15,11 +15,11 @@ import { generateQuotationHTML, printHtmlToPdfWeb } from '@/lib/pdfTemplate';
 import { useQuotation, useCompanyProfile, useUpdateQuotation, useSendQuotationEmail } from '@/features/data/apiHooks';
 import { ActivityIndicator, Alert, Modal, Pressable, Linking, TextInput } from 'react-native';
 import * as FileSystem from 'expo-file-system';
-import * as Clipboard from 'expo-clipboard';
 
 const statusColors: Record<string, string> = {
   draft: Colors.statusDraft, sent: Colors.statusSent, pending: '#f59e0b',
   approved: Colors.statusApproved, rejected: Colors.statusRejected, revised: Colors.statusRevised,
+  expired: '#9CA3AF',
 };
 
 export default function QuotationDetailScreen() {
@@ -66,15 +66,11 @@ export default function QuotationDetailScreen() {
     }
   };
 
-  const getPublicLink = () => {
-    const baseUrl = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : (process.env.EXPO_PUBLIC_APP_URL || 'https://arunquotations.vercel.app');
-    return `${baseUrl}/view/quote/${q._id}`;
-  };
-
   const handleWhatsApp = async () => {
     setShowShareMenu(false);
     const phone = q.clientId?.phone || '';
-    const publicLink = getPublicLink();
+    const baseUrl = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : (process.env.EXPO_PUBLIC_APP_URL || 'https://arunquotations.vercel.app');
+    const publicLink = `${baseUrl}/view/quote/${q._id}`;
     const text = `Hello ${q.clientId?.name || ''},\n\nHere is your quotation for: *${q.title}*\nTotal Amount: ${fmt(q.grandTotal)}\n\nView and Accept your quotation online here:\n${publicLink}\n\nPlease review it and let us know if you have any questions.\n\nBest Regards,\n${company?.companyName || 'Arun Interiors'}`;
     const url = `https://wa.me/${phone.replace(/\D/g,'')}?text=${encodeURIComponent(text)}`;
     Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open WhatsApp'));
@@ -100,17 +96,6 @@ export default function QuotationDetailScreen() {
     } catch (error) {
       Alert.alert('Error', 'Failed to send email. Check your business email credentials.');
     }
-  };
-
-  const handleCopyLink = async () => {
-    await Clipboard.setStringAsync(getPublicLink());
-    Alert.alert('Success', 'Public link copied to clipboard');
-    setShowShareMenu(false);
-  };
-
-  const handleOpenLink = () => {
-    Linking.openURL(getPublicLink()).catch(() => Alert.alert('Error', 'Could not open link'));
-    setShowShareMenu(false);
   };
 
   if (isLoading || !q) {
@@ -154,6 +139,55 @@ export default function QuotationDetailScreen() {
             <View style={styles.metaItem}><Ionicons name="layers-outline" size={14} color={Colors.textTertiary} /><Text style={styles.metaText}>{q.areas?.length || 0} areas</Text></View>
           </View>
         </Card>
+
+        {/* Client Views & Expiry Info */}
+        <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: Spacing.md, marginBottom: Spacing.lg }}>
+          {/* View Tracking */}
+          <Card variant="elevated" padding="md" style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm }}>
+              <Ionicons name="eye-outline" size={18} color={Colors.primary} style={{ marginRight: 6 }} />
+              <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.primary }}>Client Views</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View>
+                <Text style={{ fontSize: FontSize.xxl, fontWeight: FontWeight.extraBold, color: Colors.textPrimary }}>{q.viewCount || 0}</Text>
+                <Text style={{ fontSize: FontSize.xs, color: Colors.textTertiary }}>Total views</Text>
+              </View>
+              {q.lastViewedAt && (
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: Colors.textSecondary }}>Last viewed</Text>
+                  <Text style={{ fontSize: FontSize.xs, color: Colors.textTertiary }}>{new Date(q.lastViewedAt).toLocaleString()}</Text>
+                </View>
+              )}
+            </View>
+            {!q.viewCount && (
+              <Text style={{ fontSize: FontSize.xs, color: Colors.textTertiary, marginTop: Spacing.sm }}>Client hasn't viewed this quotation yet.</Text>
+            )}
+          </Card>
+
+          {/* Expiry Info */}
+          {q.validUntil && (
+            <Card variant="elevated" padding="md" style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm }}>
+                <Ionicons name="timer-outline" size={18} color={new Date(q.validUntil) < new Date() ? Colors.error : '#F59E0B'} style={{ marginRight: 6 }} />
+                <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: new Date(q.validUntil) < new Date() ? Colors.error : '#F59E0B' }}>
+                  {new Date(q.validUntil) < new Date() ? 'Expired' : 'Valid Until'}
+                </Text>
+              </View>
+              <Text style={{ fontSize: FontSize.md, fontWeight: FontWeight.semiBold, color: Colors.textPrimary }}>
+                {new Date(q.validUntil).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </Text>
+              <Text style={{ fontSize: FontSize.xs, color: Colors.textTertiary, marginTop: 2 }}>
+                {(() => {
+                  const diff = Math.ceil((new Date(q.validUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  if (diff > 0) return `Expires in ${diff} day${diff > 1 ? 's' : ''}`;
+                  if (diff === 0) return 'Expires today';
+                  return `Expired ${Math.abs(diff)} day${Math.abs(diff) > 1 ? 's' : ''} ago`;
+                })()}
+              </Text>
+            </Card>
+          )}
+        </View>
 
         {/* Area Breakdown */}
         {q.areas?.map((area: any, ai: number) => (
@@ -275,20 +309,6 @@ export default function QuotationDetailScreen() {
               <TouchableOpacity style={[styles.statusOption, { paddingVertical: Spacing.sm }]} onPress={handleWhatsApp}>
                 <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
                 <Text style={{ flex: 1, marginLeft: 12, fontSize: FontSize.md, color: Colors.textPrimary }}>Send to {q.clientId?.phone || 'Client'}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ marginBottom: Spacing.lg }}>
-              <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginBottom: Spacing.sm }}>
-                Web Links
-              </Text>
-              <TouchableOpacity style={[styles.statusOption, { paddingVertical: Spacing.sm }]} onPress={handleCopyLink}>
-                <Ionicons name="link-outline" size={20} color={Colors.primary} />
-                <Text style={{ flex: 1, marginLeft: 12, fontSize: FontSize.md, color: Colors.textPrimary }}>Copy Public Link</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.statusOption, { paddingVertical: Spacing.sm, borderBottomWidth: 0 }]} onPress={handleOpenLink}>
-                <Ionicons name="globe-outline" size={20} color={Colors.primary} />
-                <Text style={{ flex: 1, marginLeft: 12, fontSize: FontSize.md, color: Colors.textPrimary }}>Open in Browser</Text>
               </TouchableOpacity>
             </View>
 

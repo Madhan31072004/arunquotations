@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 const CompanyProfile = require('../models/CompanyProfile');
 
 // @route   GET /api/company

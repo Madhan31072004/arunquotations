@@ -49,6 +49,7 @@ export default function CreateQuotationScreen() {
   const [showAreaPicker, setShowAreaPicker] = useState(false);
   const [quotationNumber, setQuotationNumber] = useState('');
   const [galleryImages, setGalleryImages] = useState('');
+  const [validDays, setValidDays] = useState('30');
 
   const { data: clients } = useClients();
   const createClient = useCreateClient();
@@ -86,6 +87,10 @@ export default function CreateQuotationScreen() {
       }
       if (existingQuotation.galleryImages) {
         setGalleryImages(existingQuotation.galleryImages.join(', '));
+      }
+      if (existingQuotation.validUntil) {
+        const diff = Math.ceil((new Date(existingQuotation.validUntil).getTime() - new Date(existingQuotation.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+        setValidDays(diff > 0 ? String(diff) : '30');
       }
     }
   }, [existingQuotation]);
@@ -165,6 +170,7 @@ export default function CreateQuotationScreen() {
         discountType: 'percentage',
         discountValue: discountPct,
         taxPercentage: taxPct,
+        validUntil: new Date(Date.now() + Number(validDays) * 24 * 60 * 60 * 1000),
         areas: cleanedAreas,
         galleryImages: galleryImages ? galleryImages.split(',').map(u => u.trim()).filter(Boolean) : []
       };
@@ -362,6 +368,27 @@ export default function CreateQuotationScreen() {
             onChangeText={setClientName}
             icon="person-outline"
           />
+
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Valid For (Days)"
+                placeholder="30"
+                value={validDays}
+                onChangeText={setValidDays}
+                keyboardType="numeric"
+                icon="timer-outline"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginBottom: 6, fontWeight: FontWeight.medium }}>Expires On</Text>
+              <View style={{ height: 48, backgroundColor: Colors.surfaceHover, borderRadius: BorderRadius.md, justifyContent: 'center', paddingHorizontal: Spacing.md, borderWidth: 1, borderColor: Colors.border }}>
+                <Text style={{ color: Colors.textPrimary, fontSize: FontSize.md }}>
+                  {new Date(Date.now() + Number(validDays || 0) * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                </Text>
+              </View>
+            </View>
+          </View>
 
           {clientName.trim().length > 0 && !clients?.some((c: any) => c.name.toLowerCase() === clientName.trim().toLowerCase()) && (
             <View style={{ marginTop: -Spacing.sm, marginBottom: Spacing.md, gap: 1, backgroundColor: Colors.border, borderRadius: BorderRadius.md, overflow: 'hidden' }}>
