@@ -28,22 +28,11 @@ const auth = async (req, res, next) => {
     const tokenHash = Session.hashToken(token);
     const session = await Session.findOne({ tokenHash, userId: user._id });
 
-    let activeSession = session;
-    if (!activeSession) {
-      // Graceful migration: auto-create session for pre-existing valid tokens
-      // so that users who were already logged in don't get kicked out
-      const userAgent = req.headers['user-agent'] || '';
-      const { deviceName, browser, os } = Session.parseUserAgent(userAgent);
-      const ipAddress = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.ip || '';
-      activeSession = await Session.create({
-        userId: user._id,
-        tokenHash,
-        deviceName,
-        browser,
-        os,
-        ipAddress: typeof ipAddress === 'string' ? ipAddress.split(',')[0].trim() : '',
-      });
+    if (!session) {
+      return res.status(401).json({ message: 'Session expired or revoked. Please login again.' });
     }
+
+    let activeSession = session;
 
     // Update last active timestamp (throttle to every 5 minutes to reduce DB writes)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
