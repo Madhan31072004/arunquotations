@@ -11,13 +11,11 @@ const {
   changePassword,
   logout,
   forceSignOutAll,
-  verify2FA,
 } = require('../controllers/authController');
 const { auth } = require('../middleware/auth');
 
 router.post('/register', register);
 router.post('/login', login);
-router.post('/verify-2fa', verify2FA);
 router.get('/me', auth, getMe);
 router.put('/me', auth, updateMe);
 

@@ -10,9 +10,6 @@ const userSchema = new mongoose.Schema({
   tokenVersion: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
   invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  twoFactorEnabled: { type: Boolean, default: false },
-  otpCode: { type: String, select: false },
-  otpExpires: { type: Date, select: false },
 }, { timestamps: true });
 
 // Hash password before save

@@ -47,7 +47,6 @@ const getSettingsSections = (role: string) => {
     title: 'Account',
     items: [
       { icon: 'person-outline' as const, label: 'Profile', sub: 'Name, email, phone' },
-      { icon: 'shield-checkmark-outline' as const, label: 'Two-Factor Auth', sub: 'Extra security for your account' },
       { icon: 'key-outline' as const, label: 'Change Password', sub: 'Update your login password' },
       { icon: 'phone-portrait-outline' as const, label: 'Active Devices', sub: 'Manage logged-in sessions' },
       { icon: 'list-outline' as const, label: 'Activity Log', sub: 'View recent account activity' },
@@ -94,7 +93,6 @@ export default function SettingsScreen() {
   const [showDevicesModal, setShowDevicesModal] = useState(false);
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
-  const [show2FAModal, setShow2FAModal] = useState(false);
   
   const [teamName, setTeamName] = useState('');
   const [teamEmail, setTeamEmail] = useState('');
@@ -299,7 +297,6 @@ export default function SettingsScreen() {
     if (item.label === 'Active Devices') { refetchSessions(); return setShowDevicesModal(true); }
     if (item.label === 'Activity Log') return setShowActivityModal(true);
     if (item.label === 'Team Members') return setShowTeamModal(true);
-    if (item.label === 'Two-Factor Auth') return setShow2FAModal(true);
     if (item.label === 'Backup & Export') return handleExport();
     
     if (Platform.OS === 'web') {
@@ -687,45 +684,6 @@ export default function SettingsScreen() {
                 <Text style={{ fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', marginVertical: Spacing.xxl }}>No team members found.</Text>
               )}
             </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Two-Factor Auth Modal */}
-      <Modal visible={show2FAModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: '80%', width: isMobile ? '90%' : 500 }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Two-Factor Authentication</Text>
-              <TouchableOpacity onPress={() => setShow2FAModal(false)}><Ionicons name="close" size={24} color={Colors.textSecondary} /></TouchableOpacity>
-            </View>
-            <View style={{ padding: Spacing.lg }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg, padding: Spacing.md, backgroundColor: user?.twoFactorEnabled ? Colors.successBg : Colors.warningBg, borderRadius: BorderRadius.md }}>
-                <Ionicons name={user?.twoFactorEnabled ? "shield-checkmark" : "shield-half"} size={28} color={user?.twoFactorEnabled ? Colors.success : Colors.warning} style={{ marginRight: Spacing.md }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: FontSize.md, fontWeight: FontWeight.semiBold, color: Colors.textPrimary }}>
-                    {user?.twoFactorEnabled ? '2FA is Enabled' : '2FA is Disabled'}
-                  </Text>
-                  <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 4 }}>
-                    {user?.twoFactorEnabled ? 'Your account has an extra layer of security. Every time you log in, we will send an OTP to your email.' : 'Protect your account from unauthorized access by requiring an OTP when logging in.'}
-                  </Text>
-                </View>
-              </View>
-
-              <Button
-                title={user?.twoFactorEnabled ? (updateUser.isPending ? "Disabling..." : "Disable 2FA") : (updateUser.isPending ? "Enabling..." : "Enable 2FA")}
-                variant={user?.twoFactorEnabled ? "outline" : "primary"}
-                onPress={async () => {
-                  try {
-                    await updateUser.mutateAsync({ twoFactorEnabled: !user?.twoFactorEnabled });
-                    Alert.alert('Success', `Two-Factor Authentication has been ${!user?.twoFactorEnabled ? 'enabled' : 'disabled'}.`);
-                  } catch (e) {
-                    Alert.alert('Error', 'Failed to update 2FA status');
-                  }
-                }}
-                disabled={updateUser.isPending}
-              />
-            </View>
           </View>
         </View>
       </Modal>
