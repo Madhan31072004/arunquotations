@@ -6,6 +6,7 @@ import HeroSection from '../components/HeroSection';
 import AboutSection from '../components/AboutSection';
 import FeaturedProjects from '../components/FeaturedProjects';
 import GallerySection from '../components/GallerySection';
+import AutocadSection from '../components/AutocadSection';
 import DesignProcess from '../components/DesignProcess';
 import PhilosophySection from '../components/PhilosophySection';
 import SkillsetSection from '../components/SkillsetSection';
@@ -39,6 +40,9 @@ export default function PortfolioHome() {
 
         {/* 4. Visual Gallery */}
         <GallerySection />
+
+        {/* 4.5. Autocad Designs */}
+        <AutocadSection />
 
         {/* 5. Design Philosophy */}
         <PhilosophySection />

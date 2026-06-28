@@ -76,14 +76,6 @@ const ELEVATION_IMAGES = [
 const BAR_IMAGES = [
   require('../../assets/BAR AND CROCERY.jpeg'),
 ];
-const AUTOCAD_IMAGES = [
-  require('../../assets/AUTOCAD_1.jpg'),
-  require('../../assets/AUTOCAD_2.jpg'),
-  require('../../assets/AUTOCAD_3.jpg'),
-  require('../../assets/AUTOCAD_4.jpg'),
-  require('../../assets/AUTOCAD_5.jpg'),
-  require('../../assets/AUTOCAD_6.jpg'),
-];
 
 type GalleryItem = { id: number; src: any; cat: string };
 
@@ -100,13 +92,12 @@ const ALL_IMAGES: GalleryItem[] = [
   ...buildItems(TV_IMAGES, 'TV Unit', 500),
   ...buildItems(ELEVATION_IMAGES, 'Elevation', 600),
   ...buildItems(BAR_IMAGES, 'Bar', 700),
-  ...buildItems(AUTOCAD_IMAGES, 'Autocad', 800),
 ];
 
-const CATEGORIES = ['All', 'Bedroom', 'Living Area', 'Kitchen', 'Dining', 'Pooja Room', 'TV Unit', 'Elevation', 'Bar', 'Autocad'];
+const CATEGORIES = ['All', 'Bedroom', 'Living Area', 'Kitchen', 'Dining', 'Pooja Room', 'TV Unit', 'Elevation', 'Bar'];
 const CAT_ICONS: Record<string, string> = {
   All: '✦', Bedroom: '🛏️', 'Living Area': '🛋️', Kitchen: '🍳',
-  Dining: '🍽️', 'Pooja Room': '🪔', 'TV Unit': '📺', Elevation: '🏛️', Bar: '🍸', Autocad: '📐',
+  Dining: '🍽️', 'Pooja Room': '🪔', 'TV Unit': '📺', Elevation: '🏛️', Bar: '🍸',
 };
 
 // Masonry height pattern per column position for visual variety
