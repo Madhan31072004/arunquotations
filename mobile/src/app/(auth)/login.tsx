@@ -40,7 +40,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const res = await api.post('/auth/login', { email: email.trim(), password });
-      setAuth(res.data.user, res.data.token);
+      await setAuth(res.data.user, res.data.token);
       router.replace('/(main)/(tabs)/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');

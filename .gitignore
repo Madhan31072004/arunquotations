@@ -30,5 +30,5 @@ build/
 out/
 
 # Ignored subfolders (per user request to only push Protfolio_Arun & backend)
-Protfolio_Arun/
+# Protfolio_Arun/
 web_mvp/

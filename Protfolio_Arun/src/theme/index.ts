@@ -1,0 +1,56 @@
+export const theme = {
+  colors: {
+    primary: '#c9a96e',
+    secondary: '#d4b896',
+    background: '#0a0a0a',
+    surface: '#141414',
+    surfaceLight: '#1e1e1e',
+    text: '#f5f0e8',
+    textSecondary: '#8a8a8a',
+    accent: '#5c4033',
+    white: '#ffffff',
+    black: '#000000',
+    border: 'rgba(201, 169, 110, 0.2)',
+    glass: 'rgba(255, 255, 255, 0.05)',
+    glassBorder: 'rgba(255, 255, 255, 0.1)',
+    goldGlow: 'rgba(201, 169, 110, 0.3)',
+    overlay: 'rgba(0, 0, 0, 0.6)',
+  },
+  fonts: {
+    heading: 'PlayfairDisplay',
+    headingItalic: 'PlayfairDisplayItalic',
+    body: 'Inter',
+    bodyLight: 'InterLight',
+  },
+  fontSize: {
+    xs: 12,
+    sm: 14,
+    md: 16,
+    lg: 18,
+    xl: 22,
+    xxl: 28,
+    xxxl: 40,
+    hero: 64,
+    display: 80,
+  },
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 16,
+    lg: 24,
+    xl: 32,
+    xxl: 48,
+    xxxl: 64,
+    section: 100,
+  },
+  borderRadius: {
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 24,
+    full: 9999,
+  },
+} as const;
+
+export type Theme = typeof theme;
+export default theme;
