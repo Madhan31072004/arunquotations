@@ -16,16 +16,30 @@ const PROFILE = {
   location: 'Hyderabad, Telangana',
   linkedin: 'https://www.linkedin.com/in/arun-kumar-gopaldas-482a0022b',
   instagram: 'https://www.instagram.com/3d_design_diariies',
-  summary: 'Passionate and detail-oriented Interior Designer with 3+ years of professional experience transforming residential and commercial spaces into stunning, functional environments. Graduated from JD Institute of Fashion and Technology with a strong foundation in design principles, spatial planning, and material selection. Successfully delivered 100+ projects across Hyderabad.',
+  summary: 'Passionate and detail-oriented Interior Designer with 3+ years of professional experience at leading interior design firms. Worked at Urban Spacing for 2 years and Dream Modular for 1 year, transforming residential and commercial spaces into stunning, functional environments. Graduated from JD Institute of Fashion and Technology with a strong foundation in design principles, spatial planning, and material selection. Successfully delivered 100+ projects across Hyderabad.',
 };
 
 const EXPERIENCE = [
   {
-    period: '2022 – Present',
-    role: 'Freelance Interior Designer',
-    desc: 'Leading end-to-end interior design projects for residential clients across Hyderabad. Specializing in luxury bedrooms, modern kitchens, living spaces, pooja rooms, TV units, and building elevations.',
-    highlights: ['100+ Projects Delivered', 'Residential & Commercial', 'Client Satisfaction: 98%'],
+    period: '2024 – Present',
+    role: 'Interior Designer — Urban Spacing',
+    company: 'Urban Spacing',
+    desc: 'Leading end-to-end interior design projects for residential and commercial clients. Specializing in modern space planning, luxury interiors, modular kitchens, and turnkey project execution. Collaborating with architects and contractors to deliver premium design solutions across Hyderabad.',
+    highlights: ['60+ Projects Delivered', 'Residential & Commercial', 'Turnkey Solutions'],
   },
+  {
+    period: '2023 – 2024',
+    role: 'Interior Designer — Dream Modular',
+    company: 'Dream Modular',
+    desc: 'Designed and executed modular interior solutions including wardrobes, kitchens, TV units, and storage systems. Worked closely with the manufacturing team to ensure precision in custom modular furniture and timely project delivery.',
+    highlights: ['40+ Projects Delivered', 'Modular Furniture Specialist', 'Client Satisfaction: 98%'],
+  },
+  // {
+  //   period: '2022 – Present',
+  //   role: 'Freelance Interior Designer',
+  //   desc: 'Leading end-to-end interior design projects for residential clients across Hyderabad. Specializing in luxury bedrooms, modern kitchens, living spaces, pooja rooms, TV units, and building elevations.',
+  //   highlights: ['100+ Projects Delivered', 'Residential & Commercial', 'Client Satisfaction: 98%'],
+  // },
 ];
 
 const EDUCATION = [
