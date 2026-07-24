@@ -185,9 +185,11 @@ export default function CreateQuotationScreen() {
         const newQuote = await createQuotation.mutateAsync(payload);
         router.replace(`/(main)/quotation/${newQuote._id}` as any);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Save error:', e);
-      alert('Failed to save quotation');
+      const serverMsg = e?.response?.data?.message || e?.message || 'Unknown error';
+      console.error('Save error details:', { status: e?.response?.status, serverMsg, data: e?.response?.data });
+      alert(`Failed to save quotation: ${serverMsg}`);
     }
   };
 

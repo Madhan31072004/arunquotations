@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 
 // API Configuration
 const DEV_API_URL = Platform.select({
-  web: 'https://arunquotations.onrender.com/api',
+  web: 'http://localhost:5000/api',
   android: 'http://10.0.2.2:5000/api',
   ios: 'http://localhost:5000/api',
   default: 'https://arunquotations.onrender.com/api',

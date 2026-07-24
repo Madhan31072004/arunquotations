@@ -80,15 +80,24 @@ exports.createQuotation = async (req, res) => {
   try {
     const quotationNumber = await generateQuotationNumber(req.user._id);
     console.log('Backend generating quotation number:', quotationNumber);
-    const quotation = await Quotation.create({
-      ...req.body,
+
+    // Build a clean payload — only include schema-safe fields from req.body
+    const { title, clientId, status, discountType, discountValue, taxPercentage, validUntil, areas, galleryImages, notes, termsAndConditions } = req.body;
+    const createPayload = {
       userId: req.user._id,
       quotationNumber,
-    });
+      title, status, discountType, discountValue, taxPercentage, validUntil, areas, galleryImages, notes, termsAndConditions,
+    };
+    // Only set clientId if it's a valid non-empty string
+    if (clientId && typeof clientId === 'string' && clientId.trim().length > 0) {
+      createPayload.clientId = clientId;
+    }
+
+    const quotation = await Quotation.create(createPayload);
     res.status(201).json(quotation);
     logActivity(req.user._id, 'create_quotation', 'quotation', quotation._id, `Created quotation ${quotationNumber}`, req);
   } catch (error) {
-    console.error('BACKEND CREATE QUOTATION ERROR:', error);
+    console.error('BACKEND CREATE QUOTATION ERROR:', error.message, error.stack);
     res.status(500).json({ message: error.message });
   }
 };
@@ -115,13 +124,28 @@ exports.updateQuotation = async (req, res) => {
     const quotation = await Quotation.findOne({ _id: req.params.id, userId: { $in: accessibleUserIds } });
     if (!quotation) return res.status(404).json({ message: 'Quotation not found' });
 
-    Object.assign(quotation, req.body);
+    // Safe field-by-field assignment (Object.assign can corrupt Mongoose internals)
+    const allowedFields = ['title', 'status', 'discountType', 'discountValue', 'taxPercentage', 'validUntil', 'areas', 'galleryImages', 'notes', 'termsAndConditions'];
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        quotation[field] = req.body[field];
+      }
+    });
+
+    // Handle clientId separately — only update if valid
+    if (req.body.clientId && typeof req.body.clientId === 'string' && req.body.clientId.trim().length > 0) {
+      quotation.clientId = req.body.clientId;
+    }
+
+    // Do NOT overwrite quotationNumber or userId from request body
+
     await quotation.save(); // triggers pre-save calculations
 
     const populated = await quotation.populate('clientId', 'name phone projectName');
     res.json(populated);
     logActivity(req.user._id, 'update_quotation', 'quotation', quotation._id, `Updated quotation ${quotation.quotationNumber}`, req);
   } catch (error) {
+    console.error('BACKEND UPDATE QUOTATION ERROR:', error.message, error.stack);
     res.status(500).json({ message: error.message });
   }
 };
