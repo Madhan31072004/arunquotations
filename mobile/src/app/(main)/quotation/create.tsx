@@ -141,8 +141,8 @@ export default function CreateQuotationScreen() {
         }
       }
 
-      const cleanedAreas = areas.map(a => ({
-        areaName: a.areaName,
+      const cleanedAreas = areas.map((a, idx) => ({
+        areaName: a.areaName?.trim() || `Area ${idx + 1}`,
         items: a.items
           .filter(i => i.description.trim().length > 0)
           .map(i => ({
