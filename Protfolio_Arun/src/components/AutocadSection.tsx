@@ -12,6 +12,7 @@ const AUTOCAD_IMAGES = [
   require('../../assets/AUTOCAD_4.jpg'),
   require('../../assets/AUTOCAD_5.jpg'),
   require('../../assets/AUTOCAD_6.jpg'),
+  require('../../assets/AUTOCAD_7.jpg'),
 ];
 
 type GalleryItem = { id: number; src: any; cat: string };
@@ -24,14 +25,14 @@ const ALL_IMAGES: GalleryItem[] = buildItems(AUTOCAD_IMAGES, 'Autocad', 1000);
 
 // Masonry height pattern per column position for visual variety
 const MASONRY_H_DESKTOP = [360, 280, 340, 300, 320, 260, 380, 290, 350, 270, 330, 310, 295, 345];
-const MASONRY_H_TABLET  = [300, 240, 280, 260, 310, 250, 290, 270];
-const MASONRY_H_MOBILE  = [220, 260, 240, 250, 230, 270];
+const MASONRY_H_TABLET = [300, 240, 280, 260, 310, 250, 290, 270];
+const MASONRY_H_MOBILE = [220, 260, 240, 250, 230, 270];
 
 export default function AutocadSection() {
   const { width } = useWindowDimensions();
   const [hovered, setHovered] = useState<number | null>(null);
   const [showAll, setShowAll] = useState(false);
-  
+
   const { openLightbox } = useLightbox();
 
   // ─── Responsive breakpoints ───
@@ -91,20 +92,20 @@ export default function AutocadSection() {
                   onHoverIn={() => setHovered(img.id)}
                   onHoverOut={() => setHovered(null)}
                   style={[s.gridItem, { height: heroH },
-                    isHero && { borderRadius: 16 },
-                    Platform.OS === 'web' ? {
-                      transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
-                      cursor: 'pointer',
-                      ...(hovered === img.id ? {
-                         transform: isDesktop ? 'scale(1.03)' : 'scale(1.02)',
-                         boxShadow: '0 12px 40px rgba(201,169,110,0.25)',
-                      } : {}),
-                    } as any : {},
+                  isHero && { borderRadius: 16 },
+                  Platform.OS === 'web' ? {
+                    transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
+                    cursor: 'pointer',
+                    ...(hovered === img.id ? {
+                      transform: isDesktop ? 'scale(1.03)' : 'scale(1.02)',
+                      boxShadow: '0 12px 40px rgba(201,169,110,0.25)',
+                    } : {}),
+                  } as any : {},
                   ]}>
                   <Image source={img.src} style={s.gridImage} resizeMode="cover" />
                   <View style={[s.gridOverlay,
-                    Platform.OS === 'web' ? { transition: 'opacity 0.3s ease' } as any : {},
-                    { opacity: hovered === img.id ? 0.5 : 0 },
+                  Platform.OS === 'web' ? { transition: 'opacity 0.3s ease' } as any : {},
+                  { opacity: hovered === img.id ? 0.5 : 0 },
                   ]} />
 
                   {(isMobile || hovered === img.id) && (
