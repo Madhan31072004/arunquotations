@@ -1,8 +1,15 @@
 import { Platform } from 'react-native';
 
-// API Configuration
+// API Configuration — auto-detect local vs production on web
+const getWebApiUrl = () => {
+  if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
+    return 'http://localhost:5000/api';
+  }
+  return 'https://arunquotations.onrender.com/api';
+};
+
 const DEV_API_URL = Platform.select({
-  web: 'http://localhost:5000/api',
+  web: getWebApiUrl(),
   android: 'http://10.0.2.2:5000/api',
   ios: 'http://localhost:5000/api',
   default: 'https://arunquotations.onrender.com/api',

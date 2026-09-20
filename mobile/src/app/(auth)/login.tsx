@@ -84,6 +84,7 @@ export default function LoginScreen() {
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
+        id="email"
         required
       />
 
@@ -94,6 +95,7 @@ export default function LoginScreen() {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
+        id="password"
         required
       />
 

@@ -19,6 +19,7 @@ interface InputProps extends TextInputProps {
   containerStyle?: ViewStyle;
   required?: boolean;
   rightElement?: React.ReactNode;
+  id?: string;
 }
 
 export function Input({
@@ -30,6 +31,7 @@ export function Input({
   required,
   rightElement,
   secureTextEntry,
+  id,
   ...props
 }: InputProps) {
   const [isFocused, setIsFocused] = useState(false);
@@ -69,6 +71,8 @@ export function Input({
           secureTextEntry={isPassword && !showPassword}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          nativeID={id}
+          accessibilityLabel={label}
           {...props}
         />
 
