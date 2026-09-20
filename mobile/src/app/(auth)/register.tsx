@@ -118,6 +118,7 @@ export default function RegisterScreen() {
             value={name}
             onChangeText={setName}
             autoComplete="name"
+            id="register-name"
             required
           />
 
@@ -130,6 +131,7 @@ export default function RegisterScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
+            id="register-email"
             required
           />
 
@@ -140,6 +142,7 @@ export default function RegisterScreen() {
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
+            id="register-phone"
           />
 
           <Input
@@ -149,6 +152,7 @@ export default function RegisterScreen() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            id="register-password"
             required
           />
 
@@ -159,6 +163,7 @@ export default function RegisterScreen() {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
+            id="register-confirm-password"
             required
           />
 
