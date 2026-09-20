@@ -6,6 +6,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Colors } from '@/lib/theme';
 import { useAuthStore } from '@/features/auth/authStore';
+import { LogBox } from 'react-native';
+
+LogBox.ignoreLogs(['Cannot record touch end without a touch start']);
 
 const queryClient = new QueryClient({
   defaultOptions: {
